@@ -760,6 +760,18 @@ class TestCurrentMetrics(MachineCase):
         b.wait(lambda: float(b.text("#load-avg .pf-l-flex div:first-child").split()[-1].rstrip(',')) > 15)
         m.execute("systemctl stop load-hog 2>/dev/null || true")  # ok to fail, as the command exits by itself
 
+        # Test podman containers
+        if m.image != "fedora-core-os":
+            container_name = "cpu-hog"
+            m.execute(f"podman run --rm -d --name {container_name} quay.io/libpod/busybox /bin/dd if=/dev/urandom of=/dev/null")
+            self.addCleanup(m.execute, f"podman stop {container_name}")
+
+            container_sha = m.execute(f"podman inspect --format '{{{{.Id}}}}' {container_name}").strip()
+            shortid = container_sha[:12]
+
+            b.wait_in_text("#current-metrics-card-cpu", f"pod {shortid}")
+            b.wait(lambda: topServiceValue(self, "Top 5 CPU services", "%", 1) > 70)
+
         # this settles down slowly, don't wait for becoming really quiet
         with b.wait_timeout(300):
             b.wait(lambda: float(b.text("#load-avg .pf-l-flex div:first-child").split()[-1].rstrip(',')) < 10)
@@ -846,6 +858,20 @@ BEGIN {{
             m.execute("systemctl stop mem-hog")
 
         m.execute("rm /tmp/hogged")
+
+        # Test podman containers
+        container_name = "mem-hog"
+        awk_program = f"""'BEGIN {{ x = sprintf("%{size}000000s",""); system("sleep infinity") }}'"""
+        print(awk_program)
+        m.execute(f"podman run --rm -d --name {container_name} quay.io/libpod/busybox /bin/awk {awk_program}")
+        self.addCleanup(m.execute, f"podman stop {container_name}")
+
+        container_sha = m.execute(f"podman inspect --format '{{{{.Id}}}}' {container_name}").strip()
+        shortid = container_sha[:12]
+
+        b.wait_text("table[aria-label='Top 5 memory services'] tbody tr:nth-of-type(1) td[data-label='Service']", f"pod {shortid}")
+        # b.wait(lambda: topServiceValue(self, "Top 5 memory services", "Used", 1) > size)
+        # b.wait(lambda: topServiceValue(self, "Top 5 memory services", "Used", 1) < size + 50)
 
         # Test link to user services
         # older releases don't have memory accounting enabled for user services
