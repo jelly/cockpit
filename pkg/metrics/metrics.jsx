@@ -228,12 +228,14 @@ class CurrentMetrics extends React.Component {
             netInterfacesTx: [],
             topServicesCPU: [], // [ { name, percent } ]
             topServicesMemory: [], // [ { name, bytes } ]
+            podMapping: {}, // { id, name }
         };
 
         this.onVisibilityChange = this.onVisibilityChange.bind(this);
         this.onMetricsUpdate = this.onMetricsUpdate.bind(this);
         this.updateMounts = this.updateMounts.bind(this);
         this.updateLoad = this.updateLoad.bind(this);
+        this.updatePodmanContainerMapping = this.updatePodmanContainerMapping.bind(this);
 
         cockpit.addEventListener("visibilitychange", this.onVisibilityChange);
         this.onVisibilityChange();
@@ -243,6 +245,9 @@ class CurrentMetrics extends React.Component {
 
         // there is no internal metrics channel for load yet; see https://github.com/cockpit-project/cockpit/pull/14510
         this.updateLoad();
+
+        // regularly update podman container mappings
+        this.updatePodmanContainerMapping();
     }
 
     onVisibilityChange() {
@@ -380,8 +385,8 @@ class CurrentMetrics extends React.Component {
             }
         }
 
-        // return [ { [key, value, is_user, is_container] } ] list of the biggest n values
-        function n_biggest(names, values, n) {
+        // return [ { [key, value, is_user, is_container, podMapping] } ] list of the biggest n values
+        function n_biggest(names, values, n, podMapping) {
             const merged = [];
             names.forEach((k, i) => {
                 const v = values[i];
@@ -396,9 +401,9 @@ class CurrentMetrics extends React.Component {
                 const matches = k.match(podmanSystemRe);
                 if (matches && v) {
                     // truncate to 12 chars like the podman output
-                    const containerid = matches.groups.containerid.substr(0, 12);
+                    const containerid = matches.groups.containerid;
                     const is_user = k.match(/^user.*user@\d+\.service.+/);
-                    merged.push([containerid, v, is_user, true]);
+                    merged.push([podMapping[containerid] || containerid.substring(0, 12), v, is_user, true]);
                 }
             });
             merged.sort((a, b) => b[1] - a[1]);
@@ -429,15 +434,40 @@ class CurrentMetrics extends React.Component {
         }
 
         // top 5 CPU and memory consuming systemd units
-        newState.topServicesCPU = n_biggest(this.cgroupCPUNames, this.samples[9], 5).map(
+        newState.topServicesCPU = n_biggest(this.cgroupCPUNames, this.samples[9], 5, this.state.podMapping).map(
             ([key, value, is_user, is_container]) => serviceRow(key, Number(value / 10 / numCpu).toFixed(1), is_user, is_container) // usec/s → percent
         );
 
-        newState.topServicesMemory = n_biggest(this.cgroupMemoryNames, this.samples[10], 5).map(
+        newState.topServicesMemory = n_biggest(this.cgroupMemoryNames, this.samples[10], 5, this.state.podMapping).map(
             ([key, value, is_user, is_container]) => serviceRow(key, cockpit.format_bytes(value), is_user, is_container)
         );
 
         this.setState(newState);
+    }
+
+    updatePodmanContainerMapping() {
+        const promises = [];
+        function getPodmanStats(auth) {
+            return cockpit.spawn(["podman", "ps", "--format", "json"], { superuser : auth ? "required" : null });
+        }
+        promises.push(getPodmanStats(true));
+        promises.push(getPodmanStats(false));
+        Promise.all(promises).then(results => {
+            const podMapping = {};
+            for (const output of results) {
+                try {
+                    const containers = JSON.parse(output);
+                    for (const container of containers) {
+                        podMapping[container.Id] = container.Names[0];
+                    }
+                } catch (err) {
+                    console.error(_("podman ps outputs invalid JSON"), err.toString());
+                }
+            }
+            this.setState({ podMapping: podMapping });
+        });
+
+        window.setTimeout(this.updatePodmanContainerMapping, 10000);
     }
 
     render() {
