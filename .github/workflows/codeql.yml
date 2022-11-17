@@ -16,7 +16,7 @@ jobs:
         language:
           - python
           # Let's enable these one by one
-          #- javascript
+          - javascript
           #- cpp
 
     steps:
