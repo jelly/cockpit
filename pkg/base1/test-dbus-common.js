@@ -22,6 +22,7 @@ import QUnit from "qunit-tests";
 
 function deep_update(target, data) {
     for (const prop in data) {
+        if (key === "__proto__" || key === "constructor") continue;
         if (Object.prototype.toString.call(data[prop]) === '[object Object]') {
             if (!target[prop])
                 target[prop] = {};
