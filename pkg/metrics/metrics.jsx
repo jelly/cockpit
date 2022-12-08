@@ -578,7 +578,7 @@ class CurrentMetrics extends React.Component {
             }
         })
                 .catch(err => console.error("could not obtain podman names:", err))
-                .finally(() => this.setState({ podNameMapping: { ...this.state.podNameMapping, ...podNameMapping } }));
+                .finally(() => this.setState(prevState => ({ podNameMapping: { ...prevState.podNameMapping, ...podNameMapping } })));
     }
 
     render() {
@@ -1126,7 +1126,7 @@ class MetricsHour extends React.Component {
             minuteGraphs.push(<MetricsMinute key={minute} minute={minute} data={dataSlice} rawData={rawSlice} events={minute_events[minute]} startTime={this.props.startTime} />);
         }
 
-        this.setState({ minuteGraphs: minuteGraphs, dataItems: this.props.data.length });
+        this.setState((prevState, props) => ({ minuteGraphs: minuteGraphs, dataItems: props.data.length }));
     }
 
     render() {
