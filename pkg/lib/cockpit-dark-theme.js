@@ -49,7 +49,7 @@ window.addEventListener("storage", event => {
     if (event.key === "shell:style") {
         debug(`Storage element 'shell:style' changed from  ${event.oldValue} to ${event.newValue}`);
 
-        _setDarkMode();
+        // _setDarkMode();
     }
 });
 
@@ -59,12 +59,12 @@ window.addEventListener("cockpit-style", event => {
     const style = event.detail.style;
     debug(`Event received from shell with 'cockpit-style'  ${style}`);
 
-    _setDarkMode(style);
+    // _setDarkMode(style);
 });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     debug(`Operating system theme preference changed to ${window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light"}`);
-    _setDarkMode();
+    // _setDarkMode();
 });
 
-_setDarkMode();
+// _setDarkMode();
