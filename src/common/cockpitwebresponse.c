@@ -878,6 +878,7 @@ finish_headers (CockpitWebResponse *self,
   if ((seen & HEADER_X_FRAME_OPTIONS) == 0)
     g_string_append (string, "X-Frame-Options: sameorigin\r\n");
 
+  g_string_append (string, "Cross-Origin-Resource-Policy: same-origin\r\n");
   g_string_append (string, "\r\n");
   return g_string_free_to_bytes (string);
 }
