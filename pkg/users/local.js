@@ -90,24 +90,7 @@ function AccountsPage() {
     }
 }
 
-function get_locked(name) {
-    return cockpit.spawn(["/usr/bin/passwd", "-S", name], { environ: ["LC_ALL=C"], superuser: "require" })
-            .catch(() => "")
-            .then(content => {
-                const status = content.split(" ")[1];
-                // libuser uses "LK", shadow-utils use "L".
-                return status && (status == "LK" || status == "L");
-            });
-}
-
 async function getLogins() {
-    let lastlog = [];
-    try {
-        lastlog = await cockpit.spawn(["/usr/bin/lastlog"], { environ: ["LC_ALL=C"] });
-    } catch (err) {
-        console.warn("Unexpected error when getting last login information", err);
-    }
-
     let currentLogins = [];
     try {
         const w = await cockpit.spawn(["/usr/bin/w", "-sh"], { environ: ["LC_ALL=C"] });
@@ -116,11 +99,31 @@ async function getLogins() {
         console.warn("Unexpected error when getting logged in accounts", err);
     }
 
+    // fetch locked accounts information and lastlog in one go to not do O(n) cockpit.spawn queries for locked user account information
+    // as passwd does not support querying multiple accounts at the same time.
+    let users_locked_lastlog = [];
+    const cmd = ["/usr/bin/bash", "-ec", "lastlog | tail -n +2 | cut -f1 -d\" \" | xargs -n1 passwd -S; echo 'COCKPIT_DELIMITER'; lastlog | tail -n +2"];
+    try {
+        users_locked_lastlog = await cockpit.spawn(cmd, { environ: ["LC_ALL=C"], superuser: "required" });
+    } catch (err) {
+        console.warn("Unexpected error when getting locked users information", err);
+    }
+
+    const [users_locked, lastlog] = users_locked_lastlog.split('COCKPIT_DELIMITER');
+    const user_lock_mapping = {};
+    for (const content of users_locked.split('\n')) {
+        const contents = content.split(" ");
+        const username = contents[0];
+        const status = contents[1];
+        // libuser uses "LK", shadow-utils use "L".
+        user_lock_mapping[username] = status && (status == "LK" || status == "L");
+    }
+
     // drop header and last empty line with slice
     const promises = lastlog.split('\n').slice(1, -1).map(async line => {
         const splitLine = line.split(/ +/);
         const name = splitLine[0];
-        const isLocked = await get_locked(name);
+        const isLocked = user_lock_mapping[name] || false;
 
         if (line.indexOf('**Never logged in**') > -1) {
             return Promise.resolve({ name: name, loggedIn: false, lastLogin: null, isLocked: isLocked });
