@@ -63,7 +63,7 @@ function AccountsPage() {
             getLogins().then(setDetails);
         });
         return handle.close;
-    }, [path, accounts, shadow]);
+    }, []);
 
     // lastlog uses same sorting as /etc/passwd therefore arrays can be combined based on index
     let accountsInfo = [];
