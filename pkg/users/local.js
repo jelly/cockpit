@@ -55,8 +55,6 @@ function AccountsPage() {
 
     const [details, setDetails] = useState(null);
     useEffect(() => {
-        getLogins().then(setDetails);
-
         // Watch `/var/run/utmp` to register when user logs in or out
         const handle = cockpit.file("/var/run/utmp", { superuser: "try", binary: true });
         handle.watch(() => {
