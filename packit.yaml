@@ -21,33 +21,15 @@ srpm_build_deps:
 # use the nicely formatted release NEWS from our upstream release, instead of git shortlog
 copy_upstream_release_description: true
 jobs:
-  - job: tests
-    trigger: pull_request
-    targets:
-      - fedora-36
-      - fedora-37
-      - fedora-development
-      - centos-stream-8-x86_64
-      - centos-stream-9-x86_64
-
-  # run build/unit tests on some interesting architectures
-  - job: copr_build
-    trigger: pull_request
-    targets:
-      # 32 bit
-      - fedora-development-i386
-      # big-endian
-      - fedora-development-s390x
-
   - job: copr_build
     trigger: release
-    owner: "@cockpit"
-    project: "cockpit-preview"
+    owner: "jelly"
+    project: "cockpit-podman"
     preserve_project: True
     actions:
       post-upstream-clone:
         # HACK: spec must be next to the generated tarball; https://github.com/packit/packit/issues/1621
-        - cp tools/cockpit.spec .
+        - sed '/^Version:/ s/0/${PACKIT_PROJECT_VERSION}' > cockpit.spec < tools/cockpit.spec
         # HACK: https://github.com/packit/packit/issues/1560
         - tools/node-modules checkout
       # HACK: tarball for releases (copr_build, koji, etc.), copying spec's Source0; this
@@ -55,24 +37,3 @@ jobs:
       create-archive:
         - sh -exc "curl -L -O https://github.com/cockpit-project/cockpit/releases/download/${PACKIT_PROJECT_VERSION}/${PACKIT_PROJECT_NAME_VERSION}.tar.xz"
         - sh -exc "ls ${PACKIT_PROJECT_NAME_VERSION}.tar.xz"
-
-  - job: propose_downstream
-    trigger: release
-    dist_git_branches:
-      - fedora-development
-      - fedora-36
-      - fedora-37
-
-  - job: koji_build
-    trigger: commit
-    dist_git_branches:
-      - fedora-development
-      - fedora-36
-      - fedora-37
-
-  - job: bodhi_update
-    trigger: commit
-    dist_git_branches:
-      # rawhide updates are created automatically
-      - fedora-36
-      - fedora-37
