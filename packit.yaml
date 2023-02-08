@@ -1,4 +1,5 @@
-upstream_project_url: https://github.com/cockpit-project/cockpit
+upstream_project_url: https://github.com/jelly/cockpit
+issue_repository: https://github.com/jelly/cockpit-podman
 # HACK: spec must be next to the generated tarball; https://github.com/packit/packit/issues/1621
 specfile_path: cockpit.spec
 actions:
