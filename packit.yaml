@@ -30,7 +30,7 @@ jobs:
     actions:
       post-upstream-clone:
         # HACK: spec must be next to the generated tarball; https://github.com/packit/packit/issues/1621
-        - sh -exc "sed -re 's/(^Version:).*/\1 ${PACKIT_PROJECT_VERSION}/'> cockpit.spec < tools/cockpit.spec"
+        - sh -exc "sed -re 's/(^Version:).*/\1 ${PACKIT_PROJECT_NAME_VERSION}/'> cockpit.spec < tools/cockpit.spec"
         # HACK: https://github.com/packit/packit/issues/1560
         - tools/node-modules checkout
       # HACK: tarball for releases (copr_build, koji, etc.), copying spec's Source0; this
