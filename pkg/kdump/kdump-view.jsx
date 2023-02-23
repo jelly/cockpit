@@ -208,22 +208,17 @@ export class KdumpPage extends React.Component {
     }
 
     changeSetting(key, value) {
-        let settings = this.state.dialogSettings;
+        let settings = {};
 
         // a few special cases, otherwise write to config target directly
         if (key == "compression") {
-            settings.compression.enabled = value;
+            settings = Object.assign({}, this.state.dialogSettings, { compression: { ...this.state.dialogSettings.compression, ...{ enabled: value } } });
         } else if (key === "target") {
             /* target changed, restore settings and wipe all settings associated
              * with a target so no conflicting settings remain */
-            settings = {};
-            // TODO: do we need a deep copy here?
-            Object.keys(this.props.kdumpStatus.config).forEach((key) => {
-                settings[key] = { ...this.props.kdumpStatus.config[key] };
-            });
-            settings.targets = {};
-            settings.targets[value] = { type: value };
+            settings = { ...this.props.kdumpStatus.config, targets: { [value]: { type: value } } };
         } else if (key !== undefined) {
+            settings = Object.assign({}, this.state.dialogSettings);
             const type = Object.keys(settings.targets)[0];
             if (!value) {
                 if (settings.targets[type][key])
