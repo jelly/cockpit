@@ -208,28 +208,30 @@ export class KdumpPage extends React.Component {
     }
 
     changeSetting(key, value) {
-        let settings = {};
+        this.setState((prevState, prevProps) => {
+            let settings = {};
 
-        // a few special cases, otherwise write to config target directly
-        if (key == "compression") {
-            settings = Object.assign({}, this.state.dialogSettings, { compression: { ...this.state.dialogSettings.compression, ...{ enabled: value } } });
-        } else if (key === "target") {
-            /* target changed, restore settings and wipe all settings associated
-             * with a target so no conflicting settings remain */
-            settings = { ...this.props.kdumpStatus.config, targets: { [value]: { type: value } } };
-        } else if (key !== undefined) {
-            settings = Object.assign({}, this.state.dialogSettings);
-            const type = Object.keys(settings.targets)[0];
-            if (!value) {
-                if (settings.targets[type][key])
-                    delete settings.targets[type][key];
-            } else {
-                settings.targets[type][key] = value;
+            // a few special cases, otherwise write to config target directly
+            if (key == "compression") {
+                settings = Object.assign({}, prevState.dialogSettings, { compression: { ...prevState.dialogSettings.compression, ...{ enabled: value } } });
+            } else if (key === "target") {
+                /* target changed, restore settings and wipe all settings associated
+                 * with a target so no conflicting settings remain */
+                settings = { ...prevProps.kdumpStatus.config, targets: { [value]: { type: value } } };
+            } else if (key !== undefined) {
+                settings = Object.assign({}, prevState.dialogSettings);
+                const type = Object.keys(settings.targets)[0];
+                if (!value) {
+                    if (settings.targets[type][key])
+                        delete settings.targets[type][key];
+                } else {
+                    settings.targets[type][key] = value;
+                }
             }
-        }
-        this.setState({ dialogSettings: settings });
-        this.state.dialogObj.updateDialogBody(settings);
-        this.state.dialogObj.render();
+            prevState.dialogObj.updateDialogBody(settings);
+            prevState.dialogObj.render();
+            return { dialogSettings: settings };
+        });
     }
 
     handleSaveClick() {
