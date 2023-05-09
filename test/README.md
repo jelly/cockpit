@@ -248,6 +248,25 @@ each section returns the machine to more or less the state that it was
 in before the section.  This makes it easier to run these sections
 ad-hoc when doing incremental development.
 
+### Writing tests for bugs
+
+Start with an integration test which reproduces the issue, then develop
+against that to make the test pass.
+
+See for example [this commit](https://github.com/cockpit-project/cockpit/commit/d23a4647aed91d2ae3ba117919aab8172117a383)
+
+### Writing tests for features
+
+For a new feature, our goal is usually to cover both the "positive"
+functionalities, as well as a reasonable set of corner cases and error
+conditions (guided by coverage reports).
+
+See for example [this commit](https://github.com/cockpit-project/cockpit/commit/109dc1c7ea348d9f77e37f38d860f84b750f6f7e)
+
+As generating coverage takes quite a while, feel free to open a PR first which
+will trigger a `$TEST_OS/devel` test run which contains a link to coverage.
+Coverage generation is only available for Cockpit and Cockpit-podman.
+
 ## Helpful tips
 
 For web access, if you'd like to avoid Chromium (or Chrome) prompting
