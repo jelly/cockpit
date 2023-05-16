@@ -227,26 +227,62 @@ quick changes, such as adding debugging output to JavaScript.
 
 ## Guidelines for writing tests
 
-If a test is not decorated with `@nondestructive`, it is OK for a test to
-destroy the test machine OS installation, or otherwise modify it without
-cleaning up.  For example, it is OK to remove all of `/etc` just to see what
-happens.  The next test will get a pristine test machine.
+The integration tests are located in the `verify` directory and usually named
+`test-$page-$component` for example `check-system-terminal`. All tests are written
+using Python's `unittest` library and inherit from `MachineCase`. Below
+is an example of a test which logs in and verifies that expected HTML classes
+are there:
 
-Tests decorated with `@nondestructive` will all run against the same test
-machine. The nondestructive test should clean up after itself and restore the
-state of the machine, such that the next nondestructive test is not impacted.
+```python
+class TestLogin(MachineCase):
+    def testBasic(self):
+        b = self.browser
+        m = self.machine
 
-A fast running test suite is more important than independent,
-small test cases.
+        b.open("/system")
+        b.wait_visible("#login")
+        b.set_val("#login-user-input", "admin")
+        b.set_val("#login-password-input", "foobar")
+        b.click("#login-button")
+        b.enter_page("/system")
 
-Thus, it is OK for tests to be long.  Starting the test machine is so slow that
-we should run as many checks within a single session as make sense. Note that
-nondestructive tests do not suffer from this, and are much quicker.
+        b.wait_visible("#content")
+        b.wait_visible('#system_information_os_text')
+```
 
-Still, within a long test, try to have independent sections, where
-each section returns the machine to more or less the state that it was
-in before the section.  This makes it easier to run these sections
-ad-hoc when doing incremental development.
+We define a new test class `TestLogin` which inherits from the `MachineCase`
+class, this class does a few things for us. It gives us a `self.machine`
+variable which is a `TestVM` object that can be used to interact with the test
+machine. The `self.browser` variable is an instance of the `Browser` class
+which is how we interact with the test browser and control it.
+
+### Conditional execution of tests
+
+Cockpit is tested on multiple distributions and versions, some features are
+specific to one particular distro for such scenario's Cockpit has multiple ways
+to skip a test.
+
+To only test on RHEL the `onlyImage` decorator can be used
+```
+@onlyImage('rhel-*')
+class TestRhelFeature(MachineCase):
+    ...
+```
+
+To skip a test because for example RHEL lacks a feature:
+
+```python
+@skipImage("no btrfs support on RHEL", "rhel-*")`
+class TestBtrfs(MachineCase):
+    ...
+```
+
+Other commonly used decorators:
+
+* `skipOstree` - skip a test on an OSTree based distribution
+* `skipMobile` - skip a test on a mobile resolution
+
+All test decorators can be found in [test/common/testlib.py](https://github.com/cockpit-project/cockpit/blob/293/test/common/testlib.py#L2171)
 
 ### Writing tests for bugs
 
