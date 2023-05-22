@@ -284,6 +284,30 @@ Other commonly used decorators:
 
 All test decorators can be found in [test/common/testlib.py](https://github.com/cockpit-project/cockpit/blob/293/test/common/testlib.py#L2171)
 
+### Destructive versus non-destructive tests
+
+Cockpit tests can be divided into two types of tests, decorated with
+`@nondestructive` and without. When running the test suite, the tests are
+divided into separate groups of destructive and non-destructive tests. A
+non-Destructive tests can be run multiple times with the same test machine and
+run after each other and do not interfere with other tests. Destructive tests
+make it so that another test can not run after it completed.
+
+For non-destructive tests we have several helpers which can restore edited
+files or directories to their previous state, such as:
+
+* `self.write_file` - write or appends content to a file and automatically
+  restores the old contents, also can optionally accept a `post_restore_action`
+  to for example restart a service.
+* `self.restore_file` / `self.restore_dir` - call this before executing
+  destructive file operations, to automatically have the old contents restored
+  after the test finished, also can optionally accept a `post_restore_action`
+  to for example restart a service.
+* `self.addCleanup` - this [unittest module
+  function](https://docs.python.org/3/library/unittest.html?highlight=addcleanup#unittest.TestCase.addCleanup)
+  can be used clean up temporarily files / or stop started services. For
+  example `self.addCleanup(m.execute, "systemctl stop redis")`.
+
 ### Writing tests for bugs
 
 Start with an integration test which reproduces the issue, then develop
