@@ -343,6 +343,9 @@ the journal our test library defines a list of allowed journal messages. If
 your test triggers a harmless error message you can add it to the allow list
 using `self.allow_journal_messages`.
 
+During local testing SELinux violations can be ignored by setting
+`TEST_AUDIT_NO_SELINUX`.
+
 ### Generating test coverage
 
 For coverage we need to build a development build:
