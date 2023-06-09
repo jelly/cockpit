@@ -292,6 +292,7 @@ def write_lcov(covdata, outlabel):
     with open(f"{BASE_DIR}/package.json") as f:
         package = json.load(f)
     dist_map = get_dist_map(package)
+    print("distmap", dist_map)
     file_hits = {}
 
     def covranges(functions):
