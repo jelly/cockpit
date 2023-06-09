@@ -173,6 +173,7 @@ def get_distfile(url, dist_map):
     if os.path.exists(path) and os.path.exists(path + ".map"):
         return DistFile(path)
     else:
+        print("list dir", os.listdir(path))
         print("dist is there", os.path.exists(path))
         print("dist map is there", os.path.exists(path + ".map"))
         sys.stderr.write(f"SKIP {url} -> {path}\n")
