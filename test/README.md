@@ -342,3 +342,13 @@ the test if there are errors. As a test can cause harmless errors to end up in
 the journal our test library defines a list of allowed journal messages. If
 your test triggers a harmless error message you can add it to the allow list
 using `self.allow_journal_messages`.
+
+### Generating test coverage
+
+For coverage we need to build a development build:
+
+    export NODE_ENV=devel
+    ./build.js
+    ./test/image-prepare -q
+    ./test/common/run-tests --test-dir test/verify --coverage TestFoo.testBasic
+
