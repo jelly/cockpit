@@ -449,8 +449,10 @@ def prepare_for_code_coverage():
 
 
 def create_coverage_report():
+    print("Generate coverage report")
     output = os.environ.get("TEST_ATTACHMENTS", BASE_DIR)
     lcov_files = glob.glob(f"{BASE_DIR}/lcov/*.info.gz")
+    print("lcov_files", lcov_files)
     try:
         title = os.path.basename(subprocess.check_output(["git", "remote", "get-url", "origin"]))
     except subprocess.CalledProcessError:
