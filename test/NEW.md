@@ -161,4 +161,20 @@ During local testing SELinux violations can be ignored by setting
 
 ### Coverage
 
+Every pull request will trigger a `$DEFAULT_OS/devel` scenario which creates a
+coverage report of the JavaScript code. To generate coverage locally for `TestApps:
 
+```
+export NODE_ENV=devel
+./build.js
+./test/image-prepare -q
+./test/common/run-tests --test-dir test/verify --coverage TestApps
+```
+
+Code which will never get executed in tests can be ignored by adding a
+`not-covered` comment:
+
+```javascript
+    return cockpit.script(data, { superuser: "try", err: "message" })
+                  .catch(console.error); // not-covered: OS error
+```
