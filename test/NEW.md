@@ -146,6 +146,17 @@ pixel tests.
 
 ## Tips & Tricks
 
+### Unexpected journal message
+
+After a test run the testsuite reads the journal, looks for errors and fails
+the test if there are errors. As a test can cause harmless errors to end up in
+the journal our test library defines a list of allowed journal messages. If
+your test triggers a harmless error message you can add it to the allow list
+using `self.allow_journal_messages`.
+
+During local testing SELinux violations can be ignored by setting
+`TEST_AUDIT_NO_SELINUX`.
+
 ### Debugging
 
 ### Coverage
