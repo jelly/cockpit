@@ -28,29 +28,29 @@ this requires a test sandbox which can easily add have multiple disks or
 interfaces, reboot, interact with multiple machines on the same network and run
 potentially destructive test scenario's.
 
-For these reasons, Cockpit tests run inside a testing virtual machine which is
-controlled from our test framework. The test framework is responsible for
-setting up a virtual machine, opening ports for the browser and ssh for
-executing test commands.
+For these reasons, Cockpit tests run inside a testing virtual machine. Test
+virtual machine images are maintained in the
+[bots](https://github.com/cockpit-project/bots) repository. This repository
+creates custom VM images with all the packages required to build and test
+Cockpit so tests can execute and build offline. The code you want to test is
+build on the test virtual machine so one can easily test Debian under Fedora
+without having to install specific distro build tools.
 
-To replicate a user, the test framework spawns a browser and controls this
-using the [Chrome DevTools
-Protocol](https://chromedevtools.github.io/devtools-protocol/) (CDP) which is
-supported by Firefox and Chromium based browsers.
+To replicate a user, Cockpit is tested in a browser controlled using the
+[Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/)
+(CDP) which is supported by Firefox and Chromium based browsers.
 
+The test framework in `test/common` is responsible for setting up the test environment.
+
+Diagram of the interaction of Browser/Machine/CDP/Testsuite.
 ```mermaid
 graph TD;
     id[Test Framework] <-->|CDP| Browser;
     id[Test Framework] <-->|SSH| id1[Virtual Machine];
 ```
 
-The test virtual machine's base image come from the
-[bots](https://github.com/cockpit-project/bots) repository for all supported
-distributions. 
-
 - CDP
 - Control of VM's
-- Diagram of test setup / VM/framework/Browser
 - Python
 
 Entrypoints:
@@ -66,9 +66,6 @@ An overview of the directories:
 * pytest - Cockpit bridge unit tests
 * reference - git submodule checkout of our pixel test images repository
 * verify - integration tests
-
-
-Diagram of the interaction of Browser/Machine/CDP/Testsuite.
 
 ### Pixel tests
 
