@@ -162,7 +162,12 @@ During local testing SELinux violations can be ignored by setting
 ### Coverage
 
 Every pull request will trigger a `$DEFAULT_OS/devel` scenario which creates a
-coverage report of the JavaScript code. To generate coverage locally for `TestApps:
+coverage report of the JavaScript code and writes comments about uncovered code
+in the pull request. Coverage is recorded in prometheus for a subset of our
+projects and [visualized in
+Grafana](https://grafana-cockpit.apps.ocp.cloud.ci.centos.org/d/ci/cockpit-ci?orgId=1).
+
+To generate coverage locally for `TestApps:
 
 ```
 export NODE_ENV=devel
@@ -178,3 +183,10 @@ Code which will never get executed in tests can be ignored by adding a
     return cockpit.script(data, { superuser: "try", err: "message" })
                   .catch(console.error); // not-covered: OS error
 ```
+
+Collecting coverage is done by using the browser's native profiling
+instrumentation over CDP. On browser startup `Profiler.enable` and
+`Profiler.startPreciseCoverage` is called. Once the test run is completed
+`Profiler.takePreciseCoverage` is called to collect the coverage data and
+converted and written on disk in lcov format. After the all the machines are
+torn down, a coverage report is generated using lcov.
