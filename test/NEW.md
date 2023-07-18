@@ -80,7 +80,9 @@ which one cannot recover. Our test library has multiple helpers to make it easy
 to make a test non-destructive. As we care about a fast test suite it's always
 good to invest some time to make a test `non-destructive` as a lot of time is
 spent on booting a machine ~ 1 minute, while `non-destructive` tests can re-use
-an already running machine.
+an already running machine. The tests are collected as `Test` object (in
+`test/common/run-tests` which most importantly is created with a command e.g.
+`./test/verify/check-apps $args`, a timeout, etc.)
 
 Affected tests are collected by looking at the git diff of `test/verify` and
 selecting all changed tests, if more then three tests have been changed no
@@ -92,6 +94,28 @@ test has been decorated with `@testlib.no_retry_when_changed`.
 
 When an affected test runs it will be retried three times to ensure the test is
 not flaky.
+
+Unstable tests, a test which fails once will always be re-tried as our CI
+infrastructure is shared and timing issues can occur.
+
+After having collected the parallel, serial and affected tests a scheduling
+loop is started, if a machine was provided it is used for the serial tests,
+parallel tests will always spawn a new machine. If no machine is provided a
+pool of global machines is created based on the provided `--jobs` and serial tests. 
+
+The test runner will first try to assign all serial tests on the available
+global machines and start the tests. The Test class `start()` method executed
+the provided `command` with a `timeout`, creates a temporaryfile to store the
+test result in and in a thight loop the process loop will call `Test.poll()`
+which polls the spawned process if it's finished. If the process is finished
+the output of the process is flushed to the temporary file and the returncode
+of the process in `returncode`. Depending on the `returncode` or `retry_reason`
+returned by calling `Test.finish()` the test is retried, skipped, or shown as
+(un)expected failed due to the test being marked with `@testlib.todo`.
+
+**TODO:** check with pitti how the parallel tests run
+**TODO:** Diagram of this thight loop?
+**TODO:** Explain naughties?
 
 
 - Explain how the browser is started
