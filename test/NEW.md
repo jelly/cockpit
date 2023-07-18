@@ -22,6 +22,10 @@ with different versions of dependencies. Our automated tests should catch:
 - destructive
 - multi-server
 - e2e interactive click browser
+- ssh
+- CDP with `chrome-remote-interface`
+- sizzle
+- Track naughties?
 
 Our integration tests should replicate how a normal user interacts with Cockpit
 this requires a test sandbox which can easily add have multiple disks or
@@ -49,9 +53,55 @@ graph TD;
     id[Test Framework] <-->|SSH| id1[Virtual Machine];
 ```
 
-- CDP
-- Control of VM's
-- Python
+For our continious integration (CI) the entrypoint of the Cockpit tests is
+`test/run` this bash script expects a `TEST_OS` environment variable to be set
+to determine what distribution to run the tests under and a `TEST_SCENARIO`
+environment variable to determine the type of test. Currently we support these
+different scenario's:
+
+* devel - runs tests with coverage enabled and generates a html file with coverage information
+* pybridge - runs tests with the Python bridge
+* firefox - runs tests using the Firefox browser instead of Chrome
+* networking - runs all networking related tests
+* storage - runs all storage related tests
+* expensive - runs all expensive tests (usually tests which reboot/generate a new initramfs)
+* other - runs all non-networking/storage/expensive tests.
+
+Cockpit's tests are split up in scenario's to heavily parallize and allow for faster retrying.
+
+The script prepares an Virtual machine image for the given `TEST_OS` and then
+runs the tests by calling `test/common/run-tests` with the provided tests. This
+Python program collects all the provided tests and splits them up in `serial`
+and `parallel` tests. `serial` tests are what our test library calls
+`non-destructive` tests, these tests can be run multiple times against the same
+(running) Virtual machine without failing. `parallel` tests are `destructive`
+tests which for example require a reboot, or do something destructive from
+which one cannot recover. Our test library has multiple helpers to make it easy
+to make a test non-destructive. As we care about a fast test suite it's always
+good to invest some time to make a test `non-destructive` as a lot of time is
+spent on booting a machine ~ 1 minute, while `non-destructive` tests can re-use
+an already running machine.
+
+Affected tests are collected by looking at the git diff of `test/verify` and
+selecting all changed tests, if more then three tests have been changed no
+tests are marked as affected. Then collecting a git diff between the current
+branch and `main` of the `pkg/` directory and selecting the
+`test/verify/check-$pkg` counterpart. So for example a Pull Request changing
+`pkg/apps` will return `test/verify/check-apps` as affected test. Unless the
+test has been decorated with `@testlib.no_retry_when_changed`.
+
+When an affected test runs it will be retried three times to ensure the test is
+not flaky.
+
+
+- Explain how the browser is started
+- How the virtual machine is started
+- More points where to look
+- Use `test/run` to introduce all concepts
+   -> start a VM, libvirt, bots, SSH
+   -> start a Browser, CDP
+
+Pull requests start from `test/run` with a given TEST_OS
 
 Entrypoints:
 
@@ -60,7 +110,7 @@ test/reference-image
 
 An overview of the directories:
 
-* browser - everyone required for Testing Farm (TF) tests using Packit
+* browser - everything required for Testing Farm (TF) tests using Packit
 * common - our test library, used in all Cockpit sub projects
 * data - test data for integration tests
 * pytest - Cockpit bridge unit tests
@@ -164,7 +214,7 @@ in the pull request. Coverage is recorded in prometheus for a subset of our
 projects and [visualized in
 Grafana](https://grafana-cockpit.apps.ocp.cloud.ci.centos.org/d/ci/cockpit-ci?orgId=1).
 
-To generate coverage locally for `TestApps:
+To generate coverage locally for `TestApps`:
 
 ```
 export NODE_ENV=devel
@@ -187,3 +237,5 @@ instrumentation over CDP. On browser startup `Profiler.enable` and
 `Profiler.takePreciseCoverage` is called to collect the coverage data and
 converted and written on disk in lcov format. After the all the machines are
 torn down, a coverage report is generated using lcov.
+
+- Link `test/common/lcov.py`
