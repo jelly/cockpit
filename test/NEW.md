@@ -24,8 +24,6 @@ with different versions of dependencies. Our automated tests should catch:
 - e2e interactive click browser
 - ssh
 - CDP with `chrome-remote-interface`
-- sizzle
-- Track naughties?
 
 Our integration tests should replicate how a normal user interacts with Cockpit
 this requires a test sandbox which can easily add have multiple disks or
@@ -142,11 +140,17 @@ graph TD;
 Unstable tests, a test which fails once will always be re-tried as our CI
 infrastructure is shared and timing issues can occur.
 
+Naughties are expected test failures due to expected bugs in software we test,
+we still run the test but if the test error output matches a known naughty it
+is skipped. The [bots](github.com/cockpit-project/bots) repository keeps track
+of all our known naughties per distro. (The bots repository has automation
+setup to see if a naughty is still affected and if not open a pull request to
+drop it).
+
 After having collected the parallel, serial and affected tests a scheduling
 loop is started, if a machine was provided it is used for the serial tests,
 parallel tests will always spawn a new machine. If no machine is provided a
 pool of global machines is created based on the provided `--jobs` and serial tests. 
-
 
 The test runner will first try to assign all serial tests on the available
 global machines and start the tests. The Test class `start()` method executed
@@ -173,9 +177,6 @@ is always killed after a test is succeeded so we start with a fresh state:
 
 For non-destructive tests the setUp installs cleanup handlers to make sure new
 users / home directories are automatically emptied, processes stopped. 
-
-**TODO:** Diagram of this thight loop?
-**TODO:** Explain naughties?
 
 - Explain how the browser is started!!!
  Every test starts a new browser in `setUp`.
@@ -273,6 +274,8 @@ pixel tests.
 ### Setup VM
 
 ## Writing a new test
+
+- sizzle
 
 ### non destructive/destructive
 
