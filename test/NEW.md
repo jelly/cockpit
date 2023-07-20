@@ -18,8 +18,6 @@ with different versions of dependencies. Our automated tests should catch:
 
 ## Architecture
 
-- offline
-- destructive
 - multi-server
 - e2e interactive click browser
 - ssh
@@ -271,9 +269,163 @@ pixel tests.
 
 ## How to get started
 
-### Setup VM
+*Warning*: Never run the build, test, or any other command here as root!
 
-## Writing a new test
+### Preparing a test VM
+
+You first need to build cockpit, and install it into a VM:
+
+    test/image-prepare
+
+This uses the default OS image, which is currently Fedora 38. See `$TEST_OS`
+below how to select a different one.
+
+*Tip*: Passing `-q` to `image-prepare` creates the image faster by skipping running the unit tests
+
+### Running a test
+
+In most cases you want to run an individual test in a suite, for example:
+
+    test/verify/check-metrics TestCurrentMetrics.testCPU
+
+You can get a list of tests by inspecting the `def test*` in the source, or by
+running the suite with `-l`/`--list`:
+
+    test/verify/check-metrics -l
+
+Sometimes you may also want to run all tests in a test file suite:
+
+    test/verify/check-session
+
+To see more verbose output from the test, use the `-v`/`--verbose` and/or `-t`/`--trace` flags:
+
+    test/verify/check-session --verbose --trace
+
+If you specify `-s`/`--sit` in addition, then the test will wait on failure and
+allow you to log into cockpit and/or the test instance and diagnose the issue.
+The cockpit and SSH addresses of the test instance will be printed:
+
+    test/verify/check-session -st
+
+You can also run *all* the tests, with some parallelism:
+
+    test/common/run-tests --test-dir test/verify --jobs 2
+
+However, this will take *really* long. You can specify a subset of tests (see
+`--help`); but usually it's better to run individual tests locally, and let the
+CI machinery run all of them in a draft pull request.
+
+The tests will automatically download the VM images they need, so expect
+that the initial run may take a few minutes.
+
+#### Interactive browser
+
+Normally each test starts its own chromium headless browser process on a
+separate random port. To interactively follow what a test is doing:
+
+    TEST_SHOW_BROWSER=1 test/verify/check-session --trace
+
+You can also run a test against Firefox instead of Chromium:
+
+    TEST_BROWSER=firefox test/verify/check-session --trace
+
+See below for details.
+
+#### Test configuration
+
+You can set these environment variables to configure the test suite:
+
+* `TEST_OS`: The OS to run the tests in.  Currently supported values:
+                  "centos-8-stream"
+                  "debian-stable"
+                  "debian-testing"
+                  "fedora-37"
+                  "fedora-38"
+                  "fedora-coreos"
+                  "fedora-testing"
+                  "rhel-8-9"
+                  "rhel-8-9-distropkg"
+                  "rhel-9-3"
+                  "rhel4edge",
+                  "ubuntu-2204"
+                  "ubuntu-stable"
+                  "fedora-38" is the default (TEST_OS_DEFAULT in bots/lib/constants.py)
+
+* `TEST_JOBS`: How many tests to run in parallel.  The default is 1.
+
+* `TEST_CDP_PORT`: Attach to an actually running browser that is compatible with
+                   the Chrome Debug Protocol, on the given port. Don't use this
+                   with parallel tests.
+
+* `TEST_BROWSER`: What browser should be used for testing. Currently supported values:
+                     "chromium"
+                     "firefox"
+                     "chromium" is the default.
+
+* `TEST_SHOW_BROWSER`: Set to run browser interactively. When not specified,
+                       browser is run in headless mode. When set to "pixels",
+                       the browser will be resized to the exact dimensions that
+                       are used for pixel tests.
+
+* `TEST_TIMEOUT_FACTOR`: Scale normal timeouts by given integer. Useful for
+                        slow/busy testbeds or architectures.
+
+See the [bots documentation](https://github.com/cockpit-project/bots/blob/main/README.md)
+for details about the tools and configuration for these.
+
+#### Fast develop/test iteration
+
+Each `image-prepare` invocation will always start from the pristine image and
+ignore the current overlay in `test/images`. It is thorough, but also rather
+slow. If you want to iterate on changing only JavaScript/HTML code, as opposed
+to the bridge or webserver, the whole build and test cycle can be done much
+faster.
+
+You always need to do at least one initial `test/image-prepare $TEST_OS` run.
+Afterwards it depends on the kind of test you want to run.
+
+##### Nondestructive tests
+
+Many test methods or classes are marked as `@nondestructive`, meaning that
+they restore the state of the test VM enough that other tests can run
+afterwards. This is the fastest and most convenient situation for both
+iterating on the code and debugging failing tests.
+
+Start the prepared VM with `bots/vm-run $TEST_OS`. Note the SSH and cockpit
+ports. If this is the only running VM, it will have the ports in the
+examples below, otherwise the port will be different.
+
+Then start building the page you are working on
+[in watch and rsync mode](../HACKING.md#working-on-cockpits-session-pages), e.g.
+
+    RSYNC=c ./build.js -w users
+
+(Assuming the `c` SSH alias from the previous section and first running VM).
+
+Then you can run a corresponding test against the running VM, with additional
+debug output:
+
+    TEST_OS=... test/verify/check-users -t --machine 127.0.0.2:2201 --browser 127.0.0.2:9091 TestAccounts.testBasic
+
+##### Destructive tests
+
+Other tests need one or more fresh VMs. Instead of a full `test/image-prepare`
+run (which is slow), you can update the existing VM overlay with updated
+bundles. Start the build in watch mode, but without rsyncing, e.g.
+
+    ./build.js -w storaged
+
+and after each iteration, copy the new bundles into the VM overlay:
+
+    bots/image-customize -u dist:/usr/share/cockpit/ $TEST_OS
+
+Then run the test as you would normally do, e.g.
+
+    TEST_OS=... test/verify/check-storage-stratis -t TestStorageStratis.testBasic
+
+Use `bots/vm-reset` to clean up all prepared overlays in `test/images`.
+
+### Writing a new test
 
 - sizzle
 
