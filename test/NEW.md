@@ -95,6 +95,50 @@ test has been decorated with `@testlib.no_retry_when_changed`.
 When an affected test runs it will be retried three times to ensure the test is
 not flaky.
 
+```mermaid
+graph TD;
+    finished[Test finished]
+    succeeded{Test succeeded?}
+    affected{"Test affected?"}
+    affecteddone["Retry three times"]
+    skipped{Test skipped?}   
+    todosuccess{Test todo?}
+    todonosuccess{Test todo?}
+    todosucceeded["Unexpected success
+    show as failure"]
+    todofail[Expected failure]
+    pixel_journal_failure{"Pixel test or
+    unexpected journal
+    message?"}
+    retry["Retry three times
+    to be robust against
+    test failures"]
+    testfailed["Test failed"]
+    failure_policy{"Known issue?"}
+    
+    finished --> succeeded
+    succeeded --> |Yes| skipped
+    succeeded --> |No| todonosuccess
+    
+    skipped --> |Yes| skiptest[Show as skipped test]
+    skipped --> |No| affected
+    
+    affected --> |Yes| affecteddone
+    affected --> |No| todosuccess
+    
+    todosuccess --> |Yes| todosucceeded
+    todosuccess --> |No| done[Test succeeded]
+    
+    todonosuccess --> |Yes| todofail
+    todonosuccess --> |No| failure_policy
+    
+    failure_policy --> |Yes| known_issue[Show as known issue]
+    failure_policy --> |No| pixel_journal_failure
+    
+    pixel_journal_failure --> |Yes| testfailed
+    pixel_journal_failure --> |No| retry
+```
+
 Unstable tests, a test which fails once will always be re-tried as our CI
 infrastructure is shared and timing issues can occur.
 
@@ -102,6 +146,7 @@ After having collected the parallel, serial and affected tests a scheduling
 loop is started, if a machine was provided it is used for the serial tests,
 parallel tests will always spawn a new machine. If no machine is provided a
 pool of global machines is created based on the provided `--jobs` and serial tests. 
+
 
 The test runner will first try to assign all serial tests on the available
 global machines and start the tests. The Test class `start()` method executed
@@ -113,19 +158,35 @@ of the process in `returncode`. Depending on the `returncode` or `retry_reason`
 returned by calling `Test.finish()` the test is retried, skipped, or shown as
 (un)expected failed due to the test being marked with `@testlib.todo`.
 
-**TODO:** check with pitti how the parallel tests run
+The started test runs for example `./test/verify/check-apps --machine 127.0.0.1 --browser`.
+
+**FIXUP**
+(the created global machines are STARTED by `test/common/run-tests`, first we
+do the serial tests and then after we have slots parallel tests)
+
+When starting a test via `./test/verify/check-apps` either with a
+non-destructive test or using destructive tests with `provisioning` (explain)
+the machines are created in `setUp` and started. After all machines are booted
+the browser is started via the `Browser` class, which assigns this to be
+`MachineCase` class making it available for interacting in tests. The browser
+is always killed after a test is succeeded so we start with a fresh state: 
+
+For non-destructive tests the setUp installs cleanup handlers to make sure new
+users / home directories are automatically emptied, processes stopped. 
+
 **TODO:** Diagram of this thight loop?
 **TODO:** Explain naughties?
 
-
-- Explain how the browser is started
-- How the virtual machine is started
+- Explain how the browser is started!!!
+ Every test starts a new browser in `setUp`.
+- How the virtual machine is started!!!
+  ??? Good question, seems `setUp`
 - More points where to look
 - Use `test/run` to introduce all concepts
    -> start a VM, libvirt, bots, SSH
    -> start a Browser, CDP
 
-Pull requests start from `test/run` with a given TEST_OS
+Pull requests start from `test/run` with a given `TEST_OS`
 
 Entrypoints:
 
