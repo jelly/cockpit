@@ -292,6 +292,32 @@ using `self.allow_journal_messages`.
 During local testing SELinux violations can be ignored by setting
 `TEST_AUDIT_NO_SELINUX`.
 
+### Convenient test VM SSH access
+
+It is recommended to add a snippet like this to your `~/.ssh/config`. Then
+you can log in to test machines without authentication:
+
+    Match final host 127.0.0.2
+        User root
+        StrictHostKeyChecking no
+        UserKnownHostsFile /dev/null
+        CheckHostIp no
+        IdentityFile CHECKOUT_DIR/bots/machine/identity
+        IdentitiesOnly yes
+
+You need to replace `CHECKOUT_DIR` with the actual directory where you cloned
+`cockpit.git`, or `bots.git` if you have a separate clone for that.
+
+Many cockpit developers take it a step further, and add an alias to
+allow typing `ssh c`:
+
+    Host c
+        Hostname 127.0.0.2
+        Port 2201
+
+The `final` keyword in the first rule will cause it to be checked (and matched)
+after the `Hostname` substitution in the `c` rule.
+
 ### Debugging
 
 ### Coverage
