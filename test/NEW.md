@@ -281,6 +281,14 @@ pixel tests.
 
 ## Tips & Tricks
 
+### Ignore Certificate errors
+
+For web access, if you'd like to avoid Chromium (or Chrome) prompting
+about certificate errors while connecting to localhost, you can change
+the following setting:
+
+    chrome://flags/#allow-insecure-localhost
+
 ### Unexpected journal message
 
 After a test run the testsuite reads the journal, looks for errors and fails
@@ -318,7 +326,21 @@ allow typing `ssh c`:
 The `final` keyword in the first rule will cause it to be checked (and matched)
 after the `Hostname` substitution in the `c` rule.
 
-### Debugging
+### Debugging tests
+
+If you pass the `-s` ("sit on failure") option to a test program, it
+will pause when a failure occurs so that you can log into the test
+machine and investigate the problem.
+
+A test will print out the commands to access it when it fails in this
+way. You can log into a running test-machine using ssh.  See the
+section above.
+
+You can also put calls to `sit()` into the tests themselves to stop them
+at strategic places.
+
+That way, you can run a test cleanly while still being able to make
+quick changes, such as adding debugging output to JavaScript.
 
 ### Coverage
 
