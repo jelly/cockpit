@@ -18,23 +18,19 @@ with different versions of dependencies. Our automated tests should catch:
 
 ## Architecture
 
-- multi-server
-- e2e interactive click browser
-- ssh
-- CDP with `chrome-remote-interface`
-
-Our integration tests should replicate how a normal user interacts with Cockpit
-this requires a test sandbox which can easily add have multiple disks or
+The integration tests should replicate how a normal user interacts with Cockpit
+this requires a test machine which can easily add have multiple disks or
 interfaces, reboot, interact with multiple machines on the same network and run
-potentially destructive test scenario's.
+potentially destructive test scenario's. (e.g. installing/updating packages,
+formatting disks)
 
-For these reasons, Cockpit tests run inside a testing virtual machine. Test
-virtual machine images are maintained in the
+For these reasons, Cockpit tests run inside a testing virtual machine (VM).
+Test virtual machine images are maintained in the
 [bots](https://github.com/cockpit-project/bots) repository. This repository
 creates custom VM images with all the packages required to build and test
-Cockpit so tests can execute and build offline. The code you want to test is
-build on the test virtual machine so one can easily test Debian under Fedora
-without having to install specific distro build tools.
+Cockpit so tests can execute and build offline. The Cockpit source code you
+want to test is build on the test virtual machine so one can easily test Debian
+under Fedora without having to install specific distro build tools.
 
 To replicate a user, Cockpit is tested in a browser controlled using the
 [Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/)
@@ -48,6 +44,62 @@ graph TD;
     id[Test Framework] <-->|CDP| Browser;
     id[Test Framework] <-->|SSH| id1[Virtual Machine];
 ```
+
+### Integration Test
+
+- Start with `MachineCase` class
+- Or start with just a single unittest?
+
+Cockpit's tests can be run via three different entrypoints:
+* `test/run` - this is only used in Continous Integration (CI)
+* `test/common/run-tests` - run tests through our test scheduler (retries, tracks naughties)
+* `test/verify/check-$page` - run a single or multiple unit test
+
+We will start with how a single unit test is run and then explore the test
+scheduler and CI setup. The base of a Cockpit integration test looks as following:
+
+```python
+class TestFoo(testlib.MachineCase):
+    def testBasic():
+        pass
+
+if __name__ == '__main__':
+    testlib.test_main()
+```
+
+All tests use call `test_main()` which provides common test arguments and
+starts the test provided using our own test runner. 
+
+```mermaid
+sequenceDiagram
+    participant test
+    participant machine
+    participant browser
+
+    test->>test: test_main()
+    test->>test: setUp()
+    test->>machine: start()
+    test->>machine: wait_boot()
+    test->>browser: __init__()
+    test->>test: setup non-destructive setup
+    test->>test: run test
+    test->>browser: start()
+    test->>test: tearDown()
+    test->>browser: kill()
+    test->>machine: kill()
+```
+
+When starting a test via `./test/verify/check-apps` either with a
+non-destructive test or using destructive tests with `provisioning` (explain)
+the machines are created in `setUp` and started. After all machines are booted
+the browser is started via the `Browser` class, which assigns this to be
+`MachineCase` class making it available for interacting in tests. The browser
+is always killed after a test is succeeded so we start with a fresh state: 
+
+For non-destructive tests the setUp installs cleanup handlers to make sure new
+users / home directories are automatically emptied, processes stopped. 
+
+### Test Runner
 
 For our continious integration (CI) the entrypoint of the Cockpit tests is
 `test/run` this bash script expects a `TEST_OS` environment variable to be set
@@ -63,9 +115,10 @@ different scenario's:
 * expensive - runs all expensive tests (usually tests which reboot/generate a new initramfs)
 * other - runs all non-networking/storage/expensive tests.
 
-Cockpit's tests are split up in scenario's to heavily parallize and allow for faster retrying.
+Cockpit's tests are split up in scenario's to heavily parallize our testing and
+allow for faster retrying.
 
-The script prepares an Virtual machine image for the given `TEST_OS` and then
+The `test/run` prepares an Virtual machine image for the given `TEST_OS` and then
 runs the tests by calling `test/common/run-tests` with the provided tests. This
 Python program collects all the provided tests and splits them up in `serial`
 and `parallel` tests. `serial` tests are what our test library calls
@@ -75,8 +128,8 @@ tests which for example require a reboot, or do something destructive from
 which one cannot recover. Our test library has multiple helpers to make it easy
 to make a test non-destructive. As we care about a fast test suite it's always
 good to invest some time to make a test `non-destructive` as a lot of time is
-spent on booting a machine ~ 1 minute, while `non-destructive` tests can re-use
-an already running machine. The tests are collected as `Test` object (in
+spent on booting a machine ~ 10-20 seconds, while `non-destructive` tests can
+re-use an already running machine. The tests are collected as `Test` object (in
 `test/common/run-tests` which most importantly is created with a command e.g.
 `./test/verify/check-apps $args`, a timeout, etc.)
 
@@ -184,6 +237,11 @@ users / home directories are automatically emptied, processes stopped.
 - Use `test/run` to introduce all concepts
    -> start a VM, libvirt, bots, SSH
    -> start a Browser, CDP
+
+- multi-server
+- e2e interactive click browser
+- ssh
+- CDP with `chrome-remote-interface`
 
 Pull requests start from `test/run` with a given `TEST_OS`
 
@@ -427,7 +485,91 @@ Use `bots/vm-reset` to clean up all prepared overlays in `test/images`.
 
 ### Writing a new test
 
-- sizzle
+The integration tests are located in the `verify` directory and usually named
+`test-$page-$component` for example `check-system-terminal`. All tests are written
+using Python's `unittest` library and inherit from `MachineCase`. Below
+is an example of a test which logs in and verifies that expected HTML classes
+are there:
+
+```python
+class TestLogin(MachineCase):
+    def testBasic(self):
+        b = self.browser
+        m = self.machine
+
+        b.open("/system")
+        b.wait_visible("#login")
+        b.set_val("#login-user-input", "admin")
+        b.set_val("#login-password-input", "foobar")
+        b.click("#login-button")
+        b.enter_page("/system")
+
+        b.wait_visible("#content")
+        b.wait_visible('#system_information_os_text')
+```
+
+We define a new test class `TestLogin` which inherits from the `MachineCase`
+class, this class does a few things for us. It gives us a `self.machine`
+variable which is a `TestVM` object that can be used to interact with the test
+machine. The `self.browser` variable is an instance of the `Browser` class
+which is how we interact with the test browser and control it.
+
+FIXME: Expand with:
+- how CSS selectors work / sizzle
+- sizzle explaniation
+- where to look in Testlib for helpers
+
+### Conditional execution of tests
+
+Cockpit is tested on multiple distributions and versions, some features are
+specific to one particular distro for such scenario's Cockpit has multiple ways
+to skip a test.
+
+To only test on RHEL the `onlyImage` decorator can be used
+```
+@onlyImage('rhel-*')
+class TestRhelFeature(MachineCase):
+    ...
+```
+
+To skip a test because for example RHEL lacks a feature:
+
+```python
+@skipImage("no btrfs support on RHEL", "rhel-*")`
+class TestBtrfs(MachineCase):
+    ...
+```
+
+Other commonly used decorators:
+
+* `skipOstree` - skip a test on an OSTree based distribution
+* `skipMobile` - skip a test on a mobile resolution
+
+All test decorators can be found in [test/common/testlib.py](https://github.com/cockpit-project/cockpit/blob/293/test/common/testlib.py#L2171)
+
+### Destructive versus non-destructive tests
+
+Cockpit tests can be divided into two types of tests, decorated with
+`@nondestructive` and without. When running the test suite, the tests are
+divided into separate groups of destructive and non-destructive tests. A
+non-Destructive tests can be run multiple times with the same test machine and
+run after each other and do not interfere with other tests. Destructive tests
+make it so that another test can not run after it completed.
+
+For non-destructive tests we have several helpers which can restore edited
+files or directories to their previous state, such as:
+
+* `self.write_file` - write or appends content to a file and automatically
+  restores the old contents, also can optionally accept a `post_restore_action`
+  to for example restart a service.
+* `self.restore_file` / `self.restore_dir` - call this before executing
+  destructive file operations, to automatically have the old contents restored
+  after the test finished, also can optionally accept a `post_restore_action`
+  to for example restart a service.
+* `self.addCleanup` - this [unittest module
+  function](https://docs.python.org/3/library/unittest.html?highlight=addcleanup#unittest.TestCase.addCleanup)
+  can be used clean up temporarily files / or stop started services. For
+  example `self.addCleanup(m.execute, "systemctl stop redis")`.
 
 ### non destructive/destructive
 
