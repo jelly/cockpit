@@ -140,7 +140,7 @@ All tests inherit from [MachineCase](common/testlib.py), this test class holds
 a reference to the test Browser and Machine the relation between these
 components can be seen in the diagram in the previous section.
 
-## Test Runner
+### Test Runner
 
 `test/common/run-tests` Python program collects all the provided tests and splits them up in
 `serial` and `parallel` tests. `serial` tests are what our test library calls
@@ -281,7 +281,7 @@ An overview of the directories:
 * reference - git submodule checkout of our pixel test images repository
 * verify - integration tests
 
-## Continuous Integration (CI)
+### Continuous Integration (CI)
 
 In CI we have two entrypoints, one for our tests which runs on our own
 managed infrastructure and one for tests which run on the testing farm (TF).
