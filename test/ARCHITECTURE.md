@@ -1,10 +1,7 @@
 # Architecture
 
-* [x] intro
-* [x] Describe the choices we made
 * [ ] Explain the test execution how the browser starts, Virtual machine `test/verify/check-apps`
 * [ ] Explain the test runner `test/common/run-tests`
-* [ ] Explain the Pr run workflow `test/run`
 
 This document describes the architecture of Cockpit's browser integration
 tests. The tests should replicate how a normal user interacts with Cockpit this
@@ -272,15 +269,6 @@ Entrypoints:
 test/run
 test/reference-image
 
-An overview of the directories:
-
-* browser - everything required for Testing Farm (TF) tests using Packit
-* common - our test library, used in all Cockpit sub projects
-* data - test data for integration tests
-* pytest - Cockpit bridge unit tests
-* reference - git submodule checkout of our pixel test images repository
-* verify - integration tests
-
 ### Continuous Integration (CI)
 
 In CI we have two entrypoints, one for our tests which runs on our own
@@ -309,7 +297,10 @@ runs the tests by calling `test/common/run-tests` with the provided tests.
 For the Testing Farm (TF) started and managed by Packit the entrypoint is
 `test/browser/browser.sh`. On TF we get a single virtual machine without a
 hypervisor so tests run on the virtual machine directly this also implies that
-only `destructive` tests can be run.
+only `destructive` tests can be run. In the end this script also runs
+`test/common/run-tests` in `test/browser/run-tests.sh`.
+
+TF scenario's are also split up into scenario's to run faster in parallel.
 
 ## Pixel tests
 

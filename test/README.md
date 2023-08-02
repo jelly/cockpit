@@ -355,3 +355,4 @@ For coverage we need to build a development build:
     ./test/image-prepare -q
     ./test/common/run-tests --test-dir test/verify --coverage TestFoo.testBasic
 
+Not-covered: not-covered

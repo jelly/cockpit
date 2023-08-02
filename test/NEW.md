@@ -1,5 +1,14 @@
 # Tests of Cockpit
 
+An overview of the directories:
+
+* browser - everything required for Testing Farm (TF) tests using Packit
+* common - our test library, used in all Cockpit sub projects
+* data - test data for integration tests
+* pytest - Cockpit bridge unit tests
+* reference - git submodule checkout of our pixel test images repository
+* verify - integration tests
+
 This directory contains automated integration tests, pixel tests, unit tests
 for Cockpit, and the support files for them.
 
@@ -669,3 +678,25 @@ converted and written on disk in lcov format. After the all the machines are
 torn down, a coverage report is generated using lcov.
 
 - Link `test/common/lcov.py`
+
+
+- `lcov/github-pr.diff`
+
+Coverage support is implemented using the browser's native profiling
+instrumentation in [CDP](https://chromedevtools.github.io/devtools-protocol/)
+and JavaScript sourcemaps to be available for JavaScript code. When a test is
+started the browser is instructed to collecto coverage by calling CDP's
+`Profiler.enable` and `Profiler.startPreciseCoverage` method. After the test
+has finished `Profiler.takePreciseCoverage` is called to collect the coverage
+data and write it to disk in `lcov` format as for example `TestApps.testBasic.info.gz`. 
+
+Once the whole test suite is finished, 
+All of the coverage data ends up in the `lcov` directory in the root of the repository
+in the `lcov` directory in the root of the
+repository.
+
+After the all the machines are
+torn down, a coverage report is generated using `lcov`.
+
+For more details read `common/lcov.py`.
+
