@@ -1,7 +1,6 @@
 # Architecture
 
 * [ ] Explain the test execution how the browser starts, Virtual machine `test/verify/check-apps`
-* [ ] Explain the test runner `test/common/run-tests`
 
 This document describes the architecture of Cockpit's browser integration
 tests. The tests should replicate how a normal user interacts with Cockpit this
@@ -40,23 +39,17 @@ graph TD;
 
 ## Integration Test
 
-Cockpit's tests can be run via three different entrypoints:
+Cockpit's tests can be run via three different entry points:
 
 * `test/verify/check-$page` - run a single or multiple unit test
 * `test/common/run-tests` - run tests through our test scheduler (retries, tracks naughties)
-* `test/run` - run tests in Continous Integration (CI)
+* `test/run` - run tests in Continuous Integration (CI)
 
 We will start with how a single integration test is run and then explore the test
 scheduler and CI setup. The base of a Cockpit integration test looks as following:
 
 ```python
 class TestApps(testlib.MachineCase):
-    # Optionally instantiate another test virtual machine
-    provision = {
-        "0": {"memory_mb": 768},
-        "ansible_machine": {"image": TEST_OS_DEFAULT, "memory_mb": 512}
-    }
-
     def testBasic(self):
         self.machine.execute("rm /usr/share/cockpit/apps")
         self.browser.login_and_go("/apps")
@@ -69,9 +62,11 @@ if __name__ == '__main__':
 In Cockpit there are two types of tests, `destructive` and `nondestructive`
 tests. Destructive tests do something to test virtual machine which makes it
 unable to run another afterwards or requires another virtual machine for
-testing. The test above is a destructive test which is the default, a non
-destructive test makes sure any destructive action is restored after the test
-has run as can be seen below.
+testing. The test above is a `destructive` test which is the default, a non
+`destructive` test makes sure any destructive action is restored after the test
+has run as can be seen below. `nondestructive` tests where introduced to speed
+up testing, as rebooting and shutting down a machine for every tests incurs a
+significant penalty of ~ 10-30 seconds per test.
 
 ```python
 @testlib.nondestructive
@@ -125,30 +120,52 @@ for example `self.browser.open`.
 - CDP class which uses `chrome-remote-interface`
 - Specialized TestBrowser class for Firefox/Chromium with startup/profile stuff
 
-On tearDown the test status is insepcted, if it failed test logs are collected
+On `tearDown` the test status is inspected, if it failed test logs are collected
 and if the user has passed `--sit` the test pauses execution until the user
 presses enter so that the machine/browser state can be inspected.
 
 The browser is automatically killed at the end of the test and the virtual
 machine depending is killed only once the whole test suite finished or killed
-in the following test `depending` if it's a `destructive` or nondestrucitve test.
+in the following test `depending` if it's a `destructive` or `nondestrucitve` test.
+
+*FIXUP*
 
 All tests inherit from [MachineCase](common/testlib.py), this test class holds
 a reference to the test Browser and Machine the relation between these
 components can be seen in the diagram in the previous section.
 
+When starting a test via `./test/verify/check-apps` either with a
+non-destructive test or using destructive tests with `provisioning` (explain)
+the machines are created in `setUp` and started. After all machines are booted
+the browser is started via the `Browser` class, which assigns this to be
+`MachineCase` class making it available for interacting in tests. The browser
+is always killed after a test is succeeded so we start with a fresh state: 
+
+- Explain how the browser is started!!!
+ Every test starts a new browser in `setUp`.
+- How the virtual machine is started!!!
+  ??? Good question, seems `setUp`
+- More points where to look
+- Use `test/run` to introduce all concepts
+   -> start a VM, libvirt, bots, SSH
+   -> start a Browser, CDP
+
+- multi-server
+- e2e interactive click browser
+- ssh
+- CDP with `chrome-remote-interface`
+
 ### Test Runner
 
-`test/common/run-tests` Python program collects all the provided tests and splits them up in
-`serial` and `parallel` tests. `serial` tests are what our test library calls
-`non-destructive` tests, these tests can be run multiple times against the same
-(running) Virtual machine without failing. `parallel` tests are `destructive`
-tests which for example require a reboot, or do something destructive from
-which one cannot recover. Our test library has multiple helpers to make it easy
-to make a test non-destructive. As we care about a fast test suite it's always
-good to invest some time to make a test `non-destructive` as a lot of time is
-spent on booting a machine ~ 10-20 seconds, while `non-destructive` tests can
-re-use an already running machine. The tests are collected as `Test` object (in
+Cockpit uses a custom test runner to run the tests, spread the load over jobs
+and it's special handling of test failures. The test runner is implemented in
+Python in `test/common/run-tests` and expects a list of tests to be provided.
+
+The provided tests are collected and split up in `serial` and `parallel` tests.
+`serial` tests are what our test library calls `non-destructive` tests,
+`parallel` tests are `destructive` tests (the default).
+
+The tests are collected as `Test` object (in
 `test/common/run-tests` which most importantly is created with a command e.g.
 `./test/verify/check-apps $args`, a timeout, etc.)
 
@@ -220,87 +237,64 @@ drop it).
 After having collected the parallel, serial and affected tests a scheduling
 loop is started, if a machine was provided it is used for the serial tests,
 parallel tests will always spawn a new machine. If no machine is provided a
-pool of global machines is created based on the provided `--jobs` and serial tests. 
+pool of global machines is created based on the provided `--jobs` and serial
+tests. 
 
 The test runner will first try to assign all serial tests on the available
-global machines and start the tests. The Test class `start()` method executed
-the provided `command` with a `timeout`, creates a temporaryfile to store the
-test result in and in a thight loop the process loop will call `Test.poll()`
-which polls the spawned process if it's finished. If the process is finished
-the output of the process is flushed to the temporary file and the returncode
-of the process in `returncode`. Depending on the `returncode` or `retry_reason`
-returned by calling `Test.finish()` the test is retried, skipped, or shown as
-(un)expected failed due to the test being marked with `@testlib.todo`.
+global machines and start the tests. 
+
+The Test class `start()` method executed the provided `command` with a
+`timeout`, creates a temporary file to store the test result in and in a tight
+loop the process loop will call `Test.poll()` which polls the spawned process
+if it's finished. If the process is finished the output of the process is
+flushed to the temporary file and the return code of the process in
+`returncode`. Depending on the `returncode` or `retry_reason` returned by
+calling `Test.finish()` the test is retried, skipped, or shown as (un)expected
+failed due to the test being marked with `@testlib.todo`.
 
 The started test runs for example `./test/verify/check-apps --machine 127.0.0.1 --browser`.
 
-**FIXUP**
-(the created global machines are STARTED by `test/common/run-tests`, first we
-do the serial tests and then after we have slots parallel tests)
-
-When starting a test via `./test/verify/check-apps` either with a
-non-destructive test or using destructive tests with `provisioning` (explain)
-the machines are created in `setUp` and started. After all machines are booted
-the browser is started via the `Browser` class, which assigns this to be
-`MachineCase` class making it available for interacting in tests. The browser
-is always killed after a test is succeeded so we start with a fresh state: 
-
-For non-destructive tests the setUp installs cleanup handlers to make sure new
+For non-destructive tests the `setUp` installs cleanup handlers to make sure new
 users / home directories are automatically emptied, processes stopped. 
-
-- Explain how the browser is started!!!
- Every test starts a new browser in `setUp`.
-- How the virtual machine is started!!!
-  ??? Good question, seems `setUp`
-- More points where to look
-- Use `test/run` to introduce all concepts
-   -> start a VM, libvirt, bots, SSH
-   -> start a Browser, CDP
-
-- multi-server
-- e2e interactive click browser
-- ssh
-- CDP with `chrome-remote-interface`
-
-Pull requests start from `test/run` with a given `TEST_OS`
-
-Entrypoints:
-
-test/run
-test/reference-image
 
 ### Continuous Integration (CI)
 
-In CI we have two entrypoints, one for our tests which runs on our own
-managed infrastructure and one for tests which run on the testing farm (TF).
+In CI we have two entry points, one for our tests which runs on our own
+managed infrastructure by [cockpituous](https://github.com/cockpit-project/cockpituous/)
+and one for tests which run on the [testing farm (TF)](https://docs.testing-farm.io/).
 
-For our own managed infrastructure the entrypoint of the Cockpit tests is
+For our own managed infrastructure the entry point of the Cockpit tests is
 `test/run` this bash script expects a `TEST_OS` environment variable to be set
 to determine what distribution to run the tests under and a `TEST_SCENARIO`
 environment variable to determine the type of test. Currently we support these
 different scenario's:
 
-* devel - runs tests with coverage enabled and generates a html file with coverage information
-* pybridge - runs tests with the Python bridge
+* devel - runs tests with coverage enabled and generates a html file with
+  coverage information
+* pybridge - runs tests with the Python bridge (soon to be deprecated after all
+             images are moved over to the Python bridge)
 * firefox - runs tests using the Firefox browser instead of Chrome
 * networking - runs all networking related tests
 * storage - runs all storage related tests
 * expensive - runs all expensive tests (usually tests which reboot/generate a new initramfs)
 * other - runs all non-networking/storage/expensive tests.
 
-Cockpit's tests are split up in scenario's to heavily parallize our testing and
+Cockpit's tests are split up in scenario's to heavily parallelize our testing and
 allow for faster retrying.
 
 The `test/run` prepares an Virtual machine image for the given `TEST_OS` and then
 runs the tests by calling `test/common/run-tests` with the provided tests.
 
-For the Testing Farm (TF) started and managed by Packit the entrypoint is
-`test/browser/browser.sh`. On TF we get a single virtual machine without a
-hypervisor so tests run on the virtual machine directly this also implies that
-only `destructive` tests can be run. In the end this script also runs
-`test/common/run-tests` in `test/browser/run-tests.sh`.
+For the Testing Farm (TF) scenario, Packit is responsible for setting up the
+test infrastructure and the entry point is `test/browser/browser.sh`. On TF we
+get a single virtual machine without a hypervisor so tests run on the virtual
+machine directly this also implies that only `destructive` tests can be run.
+The `test/browser/browser.sh` script sets up the virtual machine and calls
+`test/browser/run-tests.sh` which selects a subset of all the `nondestructive`
+tests to run using `test/common/run-tests`.
 
-TF scenario's are also split up into scenario's to run faster in parallel.
+TF scenario's are also split up into scenario's (basic, networking, optional)
+to run faster in parallel.
 
 ## Pixel tests
 
