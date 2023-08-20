@@ -331,7 +331,7 @@ QUnit.test("watching directory", assert => {
     assert.expect(20);
 
     let n = 0;
-    const watch = cockpit.channel({ payload: "fswatch1", path: dir });
+    const watch = cockpit.channel({ payload: "fswatch1", path: dir, watch: false });
     watch.addEventListener("message", (event, payload) => {
         const msg = JSON.parse(payload);
         n += 1;
@@ -376,6 +376,26 @@ QUnit.test("watching directory", assert => {
 
     // trigger the first event
     cockpit.spawn(["sh", "-c", `echo hello > ${dir}/world.txt`]);
+});
+
+QUnit.test("listing directory", assert => {
+    const done = assert.async();
+    assert.expect(2);
+    console.log(dir);
+    const listdir = `${dir}/fslist1`;
+    cockpit.spawn(["mkdir", listdir]);
+    cockpit.spawn(["touch", `${listdir}/tmp.txt`]);
+
+    const list = cockpit.channel({ payload: "fslist1", path: listdir });
+    list.addEventListener("message", (_event, payload) => {
+        const msg = JSON.parse(payload);
+        console.log(msg);
+        assert.equal(msg.path, `${dir}/tmp.txt`);
+        assert.equal(msg.size, 0);
+        assert.equal(msg.size, 0);
+        list.close();
+        done();
+    });
 });
 
 QUnit.test("closing", assert => {
