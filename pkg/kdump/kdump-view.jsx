@@ -79,8 +79,6 @@ const exportAnsibleTask = (settings, os_release) => {
     kdump_core_collector: ${kdump_core_collector}`;
 
     if (target === "ssh") {
-        // HACK: we should not have to specify kdump_ssh_user and kdump_ssh_user as it is in kdump_target.location
-        // https://github.com/linux-system-roles/kdump/issues/184
         let ssh_user;
         let ssh_server;
         const parts = targetSettings.server.split('@');
