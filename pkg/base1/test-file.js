@@ -326,6 +326,20 @@ QUnit.test("watching without reading", assert => {
     }, { read: false });
 });
 
+QUnit.test("watching without reading pre-created", async assert => {
+    const done = assert.async();
+    assert.expect(2);
+
+    // Pre-create foobar
+    const file = cockpit.file(dir + "/foobar");
+    await cockpit.spawn(["bash", "-c", `echo 1234 > ${dir}/foobar`]);
+    file.watch((content, tag) => {
+        assert.equal(content, null, "non-existant because read is false");
+        assert.equal(tag, "-", "empty tag");
+        done();
+    }, { read: false });
+});
+
 QUnit.test("watching directory", assert => {
     const done = assert.async();
     assert.expect(20);
