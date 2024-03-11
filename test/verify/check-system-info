@@ -61,6 +61,23 @@ class TestSystemInfo(testlib.MachineCase):
         # Most OSes don't set nosmt by default, but there are some exceptions
         self.expect_smt_default = self.machine.image in ["fedora-coreos"]
 
+    def testBench(self):
+        b = self.browser
+        m = self.machine
+
+        mid = m.execute("cat /etc/machine-id")
+        print(mid)
+
+        self.login_and_go("/system")
+
+        b.wait_text('#system_machine_id', mid)
+        b.enable_perf_instrumentation()
+        b.reload()
+        b.enter_page("/system")
+        b.wait_text('#system_machine_id', mid)
+        b.collect_perf_metrics()
+        b.disable_perf_instrumentation()
+
     def testBasic(self):
         m = self.machine
         b = self.browser
