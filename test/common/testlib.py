@@ -226,6 +226,20 @@ class Browser:
         if self.cdp.browser.name == "chromium":
             self.cdp.invoke("Page.setDownloadBehavior", behavior="allow", downloadPath=self.cdp.download_dir)
 
+    def enable_perf_instrumentation(self) -> None:
+        if self.cdp.browser.name == "chromium":
+            self.cdp.invoke("Performance.enable")
+
+    def disable_perf_instrumentation(self) -> None:
+        if self.cdp.browser.name == "chromium":
+            self.cdp.invoke("Performance.disable")
+
+    def collect_perf_metrics(self):
+         metrics = self.cdp.invoke("Performance.getMetrics")
+         print(metrics)
+         with open("/tmp/metrics.json", "w") as fp:
+             json.dump(metrics, fp)
+
     def open(self, href: str, cookie: Optional[Dict[str, str]] = None, tls: bool = False):
         """Load a page into the browser.
 
