@@ -66,14 +66,16 @@ def tag_from_path(path):
         return tag_from_stat(os.stat(path))
     except FileNotFoundError:
         return '-'
-    except OSError:
+    except OSError as exc:
+        logger.error('tag_from_path err: %s', exc)
         return None
 
 
 def tag_from_fd(fd):
     try:
         return tag_from_stat(os.fstat(fd))
-    except OSError:
+    except OSError as exc:
+        logger.error('tag_from_path err: %s', exc)
         return None
 
 
@@ -172,7 +174,7 @@ class FsReplaceChannel(AsyncChannel):
         fd, tmpname = tempfile.mkstemp(dir=dirname, prefix=f'.{basename}-')
         try:
             if size is not None:
-                logger.debug('fallocate(%s.tmp, %d)', path, size)
+                logger.error('fallocate(%s.tmp, %d)', path, size)
                 if size:  # posix_fallocate() of 0 bytes is EINVAL
                     await self.in_thread(os.posix_fallocate, fd, 0, size)
                 self.ready()  # ...only after that worked
@@ -184,7 +186,7 @@ class FsReplaceChannel(AsyncChannel):
                 data = await self.read()
 
             if size is not None and written < size:
-                logger.debug('ftruncate(%s.tmp, %d)', path, written)
+                logger.error('ftruncate(%s.tmp, %d)', path, written)
                 await self.in_thread(os.ftruncate, fd, written)
 
             await self.in_thread(os.fdatasync, fd)
