@@ -19,6 +19,7 @@
 
 'use strict';
 
+import { join_data, StrOrBytes } from './_internal/common';
 import { Channel, ChannelPayload, ChannelOptions, BaseChannelOptions } from './channel';
 
 interface FileOptions extends BaseChannelOptions {
@@ -31,6 +32,7 @@ interface ReadOptions {
 }
 
 interface RemoveChannelOptions extends BaseChannelOptions {
+    path?: string;
     tag?: string;
     binary?: false;
 }
@@ -38,6 +40,18 @@ interface RemoveChannelOptions extends BaseChannelOptions {
 class RemoveChannel extends Channel<string> {
     constructor(options: RemoveChannelOptions) {
         super({ ...options, payload: 'fsreplace1' });
+    }
+}
+
+type ReadChannelOptions<P extends ChannelPayload> = ChannelOptions<P> & {
+    payload: 'fsread1',
+    path?: string;
+    max_read_size?: number;
+}
+
+class ReadChannel<P extends ChannelPayload = string> extends Channel<P> {
+    constructor(options: ReadChannelOptions<P>) {
+        super({ ...options, payload: 'fsread1' });
     }
 }
 
@@ -59,9 +73,41 @@ export class File {
         };
     }
 
+    // TODO: type return argument because typescript doesn't
     async read(options?: ReadOptions) {
-        const channel = new Channel(this.get_options());
+        let channel;
+        const opts = { ...this.get_options(), payload: 'fsread1' };
+        const data: StrOrBytes[] = [];
+        let binary = false;
+        console.log(opts);
+
+        // HACK: typefoolery, this is dumb
+        if (opts.binary) {
+            binary = true;
+            channel = new Channel<Uint8Array>({ ...opts, binary: true });
+        } else {
+            channel = new Channel(opts);
+        }
+
+        // makes it impossible to make a generator
+        channel.on('data', chunk => {
+            console.log("chunk", chunk);
+            data.push(chunk);
+        });
+
+        // ready
         await channel.wait();
+
+        return new Promise((resolve, reject) => {
+            channel.on('close', message => {
+                if (message.problem) {
+                    // TODO: BasicError
+                    reject(message.problem);
+                } else {
+                    resolve({ tag: message.tag, data: join_data(data, binary) });
+                }
+            });
+        });
     }
 
     async remove(tag?: string) {

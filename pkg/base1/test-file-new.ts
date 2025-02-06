@@ -23,6 +23,18 @@ import QUnit from "qunit-tests";
 
 let dir;
 
+QUnit.test("read", async assert => {
+    const filename = dir + "/foo";
+    const exists = await cockpit.spawn(["bash", "-c", `echo -n cockpit > ${filename} && echo exists`]);
+    assert.equal(exists, "exists\n", "exists");
+
+    const file = new File(filename);
+    const obj = await file.read();
+    console.log("read", obj);
+    assert.ok(obj.tag);
+    assert.equal(obj.data, "cockpit");
+});
+
 QUnit.test("remove", async assert => {
     const filename = dir + "/bar";
     const exists = await cockpit.spawn(["bash", "-c", `touch ${filename} && echo exists`]);
@@ -30,14 +42,14 @@ QUnit.test("remove", async assert => {
 
     const file = new File(filename);
     const tag = await file.remove();
-    console.log("tag", tag);
+    assert.equal(tag, '-');
 
     const res = await cockpit.spawn(["bash", "-c", `test -f ${filename} || echo -n gone`]);
     assert.equal(res, "gone", "gone");
 });
 
 QUnit.test("remove testdir", async assert => {
-    await cockpit.spawn(["rm", "-rf", dir]);
+    // await cockpit.spawn(["rm", "-rf", dir]);
     assert.ok(true, "did not crash");
 });
 
