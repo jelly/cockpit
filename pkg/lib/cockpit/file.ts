@@ -44,7 +44,7 @@ class RemoveChannel extends Channel<string> {
 }
 
 type ReadChannelOptions<P extends ChannelPayload> = ChannelOptions<P> & {
-    payload: 'fsread1',
+    payload: string,
     path?: string;
     max_read_size?: number;
 }
@@ -53,6 +53,11 @@ class ReadChannel<P extends ChannelPayload = string> extends Channel<P> {
     constructor(options: ReadChannelOptions<P>) {
         super({ ...options, payload: 'fsread1' });
     }
+}
+
+interface ReadData {
+    data: StrOrBytes;
+    tag: string;
 }
 
 // TODO: look test-channel.ts
@@ -68,13 +73,11 @@ export class File {
     private get_options() {
         return {
             ...this.options,
-            payload: "fsread1",
             path: this.filename,
         };
     }
 
-    // TODO: type return argument because typescript doesn't
-    async read(options?: ReadOptions) {
+    async read(options?: ReadOptions): Promise<ReadData> {
         let channel;
         const opts = { ...this.get_options(), payload: 'fsread1' };
         const data: StrOrBytes[] = [];
@@ -84,12 +87,11 @@ export class File {
         // HACK: typefoolery, this is dumb
         if (opts.binary) {
             binary = true;
-            channel = new Channel<Uint8Array>({ ...opts, binary: true });
+            channel = new ReadChannel<Uint8Array>({ ...opts, binary: true });
         } else {
-            channel = new Channel(opts);
+            channel = new ReadChannel(opts);
         }
 
-        // makes it impossible to make a generator
         channel.on('data', chunk => {
             console.log("chunk", chunk);
             data.push(chunk);
@@ -104,7 +106,7 @@ export class File {
                     // TODO: BasicError
                     reject(message.problem);
                 } else {
-                    resolve({ tag: message.tag, data: join_data(data, binary) });
+                    resolve({ tag: message.tag as string, data: join_data(data, binary) });
                 }
             });
         });

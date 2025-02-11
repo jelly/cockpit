@@ -33,6 +33,17 @@ QUnit.test("read", async assert => {
     console.log("read", obj);
     assert.ok(obj.tag);
     assert.equal(obj.data, "cockpit");
+
+    // read bigger file
+    const large_filename = dir + "/large";
+    const long_text = Array(50).fill("lorem ipsum").join(' ');
+    const large_exists = await cockpit.spawn(["bash", "-c", `echo -n "${long_text}" > ${large_filename} && echo exists`]);
+    assert.equal(large_exists, "exists\n", "exists");
+    const large_file = new File(large_filename);
+    const data = await large_file.read();
+    console.log(data);
+    assert.ok(data.tag);
+    assert.equal(data.data, long_text);
 });
 
 QUnit.test("remove", async assert => {
