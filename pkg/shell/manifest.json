@@ -35,22 +35,9 @@
     "bridges": [
         {
             "privileged": true,
-            "environ": [
-                "SUDO_ASKPASS=${libexecdir}/cockpit-askpass"
-            ],
+	    "label": "sudo",
             "spawn": [
-                "sudo",
-                "-k",
-                "-A",
-                "cockpit-bridge",
-                "--privileged"
-            ]
-        },
-        {
-            "privileged": true,
-            "spawn": [
-                "pkexec",
-                "--disable-internal-agent",
+                "run0",
                 "cockpit-bridge",
                 "--privileged"
             ]
