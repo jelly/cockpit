@@ -258,6 +258,7 @@ class Channel(Endpoint):
         #   - exceptions bubbling out of the task are programming errors
         #   - the only thing we'd do with it anyway, is to show it
         #   - Python already does that with its "Task exception was never retrieved" messages
+        logger.debug('REMOVING task %s', task)
         self._tasks.remove(task)
         if self._close_args is not None and not self._tasks:
             self._close_now()

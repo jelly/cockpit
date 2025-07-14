@@ -505,6 +505,8 @@ class DBusChannel(Channel):
             self.create_task(self.do_call(message))
         elif 'add-match' in message:
             self.create_task(self.do_add_match(message))
+        elif 'remove-match' in message:
+            logger.debug('yay removing watch')
         elif 'watch' in message:
             self.create_task(self.do_watch(message))
         elif 'meta' in message:
