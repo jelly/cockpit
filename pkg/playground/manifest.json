@@ -44,6 +44,9 @@
         },
         "remote": {
             "label": "Remote channel"
+        },
+        "packagemanager": {
+            "label": "Package Manager"
         }
     },
     "preload": [ "preloaded" ],

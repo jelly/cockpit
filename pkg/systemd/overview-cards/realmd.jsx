@@ -41,6 +41,7 @@ import * as packagekit from "packagekit.js";
 import { useDialogs } from "dialogs.jsx";
 
 import "./realmd.scss";
+import { getPackageManager } from 'packagemanager';
 
 const _ = cockpit.gettext;
 
@@ -68,13 +69,13 @@ export class RealmdClient {
     onClose(ev, options) {
         if (options.problem === "not-found") {
             // see if we can install it
-            packagekit.detect().then(exists => {
-                if (exists) {
-                    this.error = _("Joining a domain requires installation of realmd");
-                    this.install_realmd = true;
-                } else {
-                    this.error = _("Cannot join a domain because realmd is not available on this system");
-                }
+            getPackageManager().then(package_manager => {
+                this.error = _("Joining a domain requires installation of realmd");
+                this.install_realmd = true;
+                this.dispatchEvent("changed");
+            }).catch(exc => {
+                console.warn(exc);
+                this.error = _("Cannot join a domain because realmd is not available on this system");
                 this.dispatchEvent("changed");
             });
         } else {

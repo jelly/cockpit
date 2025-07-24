@@ -28,6 +28,7 @@ import { show_modal_dialog } from "cockpit-components-dialog.jsx";
 import * as PK from "packagekit.js";
 
 import "cockpit-components-install-dialog.css";
+import { getPackageManager } from "packagemanager";
 
 const _ = cockpit.gettext;
 
@@ -54,7 +55,7 @@ function format_to_fragments(fmt, arg) {
  * (If you do anyway, the resulting D-Bus errors will be shown to the user.)
  */
 
-export function install_dialog(pkg, options) {
+export async function install_dialog(pkg, options) {
     let data = null;
     let error_message = null;
     let progress_message = null;
@@ -63,6 +64,8 @@ export function install_dialog(pkg, options) {
 
     if (!Array.isArray(pkg))
         pkg = [pkg];
+
+    const package_manager = await getPackageManager();
 
     options = options || { };
 
@@ -142,19 +145,19 @@ export function install_dialog(pkg, options) {
     }
 
     function check_missing() {
-        PK.check_missing_packages(pkg,
-                                  p => {
-                                      cancel = p.cancel;
-                                      let pm = null;
-                                      if (p.waiting)
-                                          pm = _("Waiting for other software management operations to finish");
-                                      else
-                                          pm = _("Checking installed software");
-                                      if (pm != progress_message) {
-                                          progress_message = pm;
-                                          update();
-                                      }
-                                  })
+        package_manager.check_missing_packages(pkg,
+                                               p => {
+                                                   cancel = p.cancel;
+                                                   let pm = null;
+                                                   if (p.waiting)
+                                                       pm = _("Waiting for other software management operations to finish");
+                                                   else
+                                                       pm = _("Checking installed software");
+                                                   if (pm != progress_message) {
+                                                       progress_message = pm;
+                                                       update();
+                                                   }
+                                               })
                 .then(d => {
                     if (d.unavailable_names.length > 0)
                         error_message = cockpit.format(_("$0 is not available from any repository."),
@@ -174,23 +177,23 @@ export function install_dialog(pkg, options) {
     }
 
     function install_missing(progress_cb) {
-        return PK.install_missing_packages(data,
-                                           p => {
-                                               let text = null;
-                                               if (p.waiting) {
-                                                   text = _("Waiting for other software management operations to finish");
-                                               } else if (p.package) {
-                                                   let fmt;
-                                                   if (p.info == PK.Enum.INFO_DOWNLOADING)
-                                                       fmt = _("Downloading $0");
-                                                   else if (p.info == PK.Enum.INFO_REMOVING)
-                                                       fmt = _("Removing $0");
-                                                   else
-                                                       fmt = _("Installing $0");
-                                                   text = format_to_fragments(fmt, <strong>{p.package}</strong>);
-                                               }
-                                               progress_cb(text, p.cancel);
-                                           });
+        return package_manager.install_missing_packages(data,
+                                                        p => {
+                                                            let text = null;
+                                                            if (p.waiting) {
+                                                                text = _("Waiting for other software management operations to finish");
+                                                            } else if (p.package) {
+                                                                let fmt;
+                                                                if (p.info == PK.Enum.INFO_DOWNLOADING)
+                                                                    fmt = _("Downloading $0");
+                                                                else if (p.info == PK.Enum.INFO_REMOVING)
+                                                                    fmt = _("Removing $0");
+                                                                else
+                                                                    fmt = _("Installing $0");
+                                                                text = format_to_fragments(fmt, <strong>{p.package}</strong>);
+                                                            }
+                                                            progress_cb(text, p.cancel);
+                                                        });
     }
 
     update();

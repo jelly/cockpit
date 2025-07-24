@@ -1169,6 +1169,7 @@ class TestPackageInstall(packagelib.PackageCase):
 
         # case 1: disable PackageKit
         m.execute("systemctl mask packagekit; systemctl stop packagekit.service || true")
+        m.execute("systemctl mask dnf5daemon-server; systemctl stop dnf5daemon-server.service || true")
         self.allow_browser_errors('checkRealm failed.*"problem":"not-found"')
         self.login_and_go("/system")
         b.wait_text(self.domain_sel, "Join domain")
@@ -1178,6 +1179,7 @@ class TestPackageInstall(packagelib.PackageCase):
 
         # case 2: enable PackageKit, but no realmd package available
         m.execute("systemctl unmask packagekit")
+        m.execute("systemctl unmask dnf5daemon")
         self.login_and_go("/system")
         # Joining a domain should bring up the install dialog
         b.wait_text(self.domain_sel, "Install realmd support")

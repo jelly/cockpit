@@ -56,6 +56,7 @@ async function detect_packagekit() {
     }
 }
 
+// Cache result for a session
 export async function getPackageManager(): Promise<PackageManager> {
     const unsupported = await is_immutable_os();
     if (unsupported)
