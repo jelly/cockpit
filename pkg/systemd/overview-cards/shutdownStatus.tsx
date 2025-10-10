@@ -29,8 +29,7 @@ import "./shutdownStatus.scss";
 
 const _ = cockpit.gettext;
 
-const getScheduledShutdown = (setShutdownTime: (t: number) => void, setShutdownType: (t: string) => void) => {
-    const client = cockpit.dbus("org.freedesktop.login1");
+const getScheduledShutdown = (client: cockpit.DBusClient, setShutdownTime: (t: number) => void, setShutdownType: (t: string) => void) => {
     return client.call("/org/freedesktop/login1", "org.freedesktop.DBus.Properties", "Get",
                        ["org.freedesktop.login1.Manager", "ScheduledShutdown"], { type: "ss" })
             .then(([result]) => {
@@ -57,11 +56,16 @@ export const ShutDownStatus = () => {
     const [shutdownTime, setShutdownTime] = useState<number | null>(0);
 
     useEffect(() => {
-        getScheduledShutdown(setShutdownTime, setShutdownType);
-        // logind does not have a propertieschanged mechanism https://github.com/systemd/systemd/issues/22244
-        cockpit.file("/run/systemd/shutdown/scheduled").watch(() => {
-            getScheduledShutdown(setShutdownTime, setShutdownType);
-        });
+        const client = cockpit.dbus("org.freedesktop.login1");
+        getScheduledShutdown(client, setShutdownTime, setShutdownType);
+        const subscription = client.subscribe({ interface: "org.freedesktop.DBus.Properties", member: "PropertiesChanged" },
+                                              (_path, _iface, _member, args) => {
+                                                  const arg = args[1] as {ScheduledShutdown?: { v: [], t: string} };
+                                                  if (arg?.ScheduledShutdown) {
+                                                      getScheduledShutdown(client, setShutdownTime, setShutdownType);
+                                                  }
+                                              });
+        return () => subscription?.remove();
     }, []);
 
     // We only care about these two types
