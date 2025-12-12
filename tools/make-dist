@@ -27,7 +27,7 @@ done
 if [ ! configure -nt configure.ac ]; then
     message AUTOGEN 'configure, Makefile.in'
     # Unfortunately there's no better way to silence this
-    NOCONFIGURE=1 ./autogen.sh >/dev/null 2>&1
+    NOCONFIGURE=1 ./autogen.sh >/dev/null
 fi
 
 # If we have a configured tree, use it to build the tarball.  Otherwise, create
