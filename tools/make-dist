@@ -51,6 +51,7 @@ else
         > /dev/null
 fi
 
+message CONFIG "config done, make disttarball"
 # Do the actual build; dist creates both the main and node runtime tarballs
 make -s -j"$(nproc)" XZ_OPT='-0' VERSION="${VERSION}" "$@" dist >&2
 
