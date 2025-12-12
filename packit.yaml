@@ -6,6 +6,7 @@ actions:
     # we already build a spec file with correct Version, so extract it
     - |
       bash -exc '
+      ls -lh
       mapfile -t TARBALLS < <(tools/make-dist)
       # Extract spec file from main tarball (first in array)
       tar -xJf "${TARBALLS[0]}" --wildcards "*/tools/cockpit.spec" --strip-components=2
