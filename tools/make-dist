@@ -30,6 +30,8 @@ if [ ! configure -nt configure.ac ]; then
     NOCONFIGURE=1 ./autogen.sh >/dev/null
 fi
 
+message AUTOGEN "autogen done, next"
+
 # If we have a configured tree, use it to build the tarball.  Otherwise, create
 # a temporary directory and configure it with a minimal config to build the
 # tarball.
