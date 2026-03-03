@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+from urllib.parse import urlparse
 
 import gi
 
@@ -78,6 +79,11 @@ class CockpitClientWindow(Gtk.ApplicationWindow):
 
         self.webview.get_settings().set_enable_developer_extras(enabled=True)
         self.webview.connect('decide-policy', self.decide_policy)
+        self.webview.connect('create', self.create_web_view)
+
+        context = self.webview.get_context()
+        context.connect('download-started', self.download_started)
+
         self.webview.load_uri(uri)
 
         history = self.webview.get_back_forward_list()
@@ -117,6 +123,57 @@ class CockpitClientWindow(Gtk.ApplicationWindow):
             return True
 
         return False
+
+    def create_web_view(self, web_view, navigation_action):
+        """Called when JavaScript tries to create a new window (for cockpit-files downloads)"""
+
+        uri = navigation_action.get_request().get_uri()
+        uri_parsed = urlparse(uri)
+        current_uri = web_view.get_uri()
+
+        # Check if URL is same-origin
+        if current_uri:
+            current_parsed = urlparse(current_uri)
+            current_origin = f"{current_parsed.scheme}://{current_parsed.netloc}"
+            uri_origin = f"{uri_parsed.scheme}://{uri_parsed.netloc}"
+
+            if current_origin == uri_origin:
+                logging.debug("Triggering download for same-origin URI: %s", uri)
+                self.webview.download_uri(uri)
+
+    def download_started(self, _context, download):
+        """Handle file downloads with a save dialog"""
+
+        download.set_allow_overwrite(True)
+        uri = download.get_request().get_uri()
+        logging.debug("download_started signal fired for URI: %s", uri)
+
+        # Connect signals first, before showing dialog
+        download.connect('decide-destination', self.download_decide_destination)
+
+    def download_decide_destination(self, download, suggested_filename):
+        """Handle destination selection for downloads"""
+
+        dialog = Gtk.FileChooserNative(
+            transient_for=self,
+            action=Gtk.FileChooserAction.SAVE
+        )
+        dialog.set_current_name(suggested_filename)
+        dialog.set_do_overwrite_confirmation(True)
+
+        response = dialog.run()
+        filepath = dialog.get_filename()
+        dialog.destroy()
+
+        if response == Gtk.ResponseType.ACCEPT and filepath:
+            logging.debug("Download destination set to: %s", filepath)
+            download.set_destination(f'file://{filepath}')
+
+            return True
+        else:
+            logging.debug("Download cancelled by user")
+            download.cancel()
+            return False
 
     def zoom(self, _action, parameter, *_unused):
         current = self.webview.get_zoom_level()
