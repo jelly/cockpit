@@ -714,6 +714,7 @@ OnCalendar=daily
                   sum += data[j][1];
                   while (i < j && (data[j][0] - data[i][0]) > duration * 1000) {
                       avg = sum / (j - i + 1);
+                      console.log("avg", avg);
                       if (ok(avg) && ok(data[i][1]) && ok(data[j][1]))
                           return true;
                       sum -= data[i][1];
@@ -738,7 +739,6 @@ OnCalendar=daily
             mem_avail = meminfo['MemAvailable']
             print("later mem_avail", mem_avail, mem_avail * 0.85, mem_avail * 1.15)
             b.wait_js_func("ph_plot_data_plateau", "direct", mem_avail * 0.85, mem_avail * 1.15, 15, "mem")
-        testlib.sit()
 
         meminfo = read_mem_info(m)
         mem_avail = meminfo['MemAvailable']
