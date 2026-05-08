@@ -221,7 +221,7 @@ class Connect extends React.Component {
     }
 
     onConnect() {
-        window.sessionStorage.setItem("connection-warning-shown", true);
+        window.sessionStorage.setItem("connection-warning-shown", "true");
         this.setState({ inProgress: true });
         this.props.run(try2Connect(this.props.machines_ins, this.props.full_address), ex => {
             let keep_message = false;
