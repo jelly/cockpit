@@ -133,13 +133,6 @@ export function mock_hostnamed(value) {
     }
 }
 
-export function flatten(array_of_arrays) {
-    if (array_of_arrays.length > 0)
-        return Array.prototype.concat.apply([], array_of_arrays);
-    else
-        return [];
-}
-
 export const decode_filename = encoded => window.atob(encoded).replace('\u0000', '');
 export const encode_filename = decoded => window.btoa(decoded + '\u0000');
 
@@ -585,9 +578,9 @@ function get_direct_parent_blocks(client, path) {
 
 export function get_parent_blocks(client, path) {
     const direct_parents = get_direct_parent_blocks(client, path);
-    const direct_and_indirect_parents = flatten(direct_parents.map(function (p) {
+    const direct_and_indirect_parents = direct_parents.map(function (p) {
         return get_parent_blocks(client, p);
-    }));
+    }).flat();
     return [path].concat(direct_and_indirect_parents);
 }
 

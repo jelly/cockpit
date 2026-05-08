@@ -20,7 +20,7 @@ import { StorageUsageBar } from "../storage-controls.jsx";
 import {
     encode_filename, decode_filename,
     get_fstab_config_with_client, reload_systemd,
-    flatten, teardown_active_usage,
+    teardown_active_usage,
 } from "../utils.js";
 import { btrfs_usage, validate_subvolume_name, parse_subvol_from_options } from "./utils.jsx";
 import { at_boot_input, update_at_boot_input, mounting_dialog, mount_options } from "../filesystem/mounting-dialog.jsx";
@@ -199,7 +199,7 @@ function subvolume_delete(volume, subvol, card) {
     function get_subvol_children(subvol) {
         // The deepest nested children must come first
         const direct_children = get_direct_subvol_children(subvol);
-        return flatten(direct_children.map(get_subvol_children)).concat(direct_children);
+        return direct_children.map(get_subvol_children).flat().concat(direct_children);
     }
 
     const all_subvols = get_subvol_children(subvol).concat([subvol]);
