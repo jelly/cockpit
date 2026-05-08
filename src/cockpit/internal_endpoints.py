@@ -82,8 +82,12 @@ class cockpit_Machines(bus.Object):
 
     @bus.Interface.Method(in_types=['s', 's', 'a{sv}'])
     def update(self, filename: str, hostname: str, attrs: Dict[str, Variant]) -> None:
+        target = self.path.joinpath(filename).resolve()
+        if not target.is_relative_to(self.path.resolve()):
+            raise bus.BusError('cockpit.Machines.Error', f'Invalid filename: {filename}')
+
         try:
-            with self.path.joinpath(filename).open() as fp:
+            with target.open() as fp:
                 contents = json.load(fp)
         except json.JSONDecodeError as exc:
             # Refuse to replace corrupted file
@@ -95,7 +99,7 @@ class cockpit_Machines(bus.Object):
         contents.setdefault(hostname, {}).update({key: value.value for key, value in attrs.items()})
 
         self.path.mkdir(parents=True, exist_ok=True)
-        with open(self.path.joinpath(filename), 'w') as fp:
+        with open(target, 'w') as fp:
             json.dump(contents, fp, indent=2)
 
     def notify(self) -> None:
