@@ -38,7 +38,7 @@ const supported_ipv4_methods = ['auto', 'link-local', 'manual', 'shared', 'disab
 // NM only supports a subset of IPv4 and IPv6 methods for wireguard
 // See: https://gitlab.freedesktop.org/NetworkManager/NetworkManager/-/blob/1.42.8/src/libnm-core-impl/nm-setting-wireguard.c#L1723
 const wg_supported_ipv4_methods = ['manual', 'disabled'];
-const wg_supported_ipv6_methods = ['link-local', 'manual', 'ignored', 'disabled'];
+const wg_supported_ipv6_methods = ['link-local', 'manual', 'ignore', 'disabled'];
 
 export function get_ip_method_choices(topic, device_type) {
     if (topic === 'ipv4') {
