@@ -1005,7 +1005,7 @@ class ChangeAuth extends React.Component {
                                 type="password" value={this.state.login_setup_new_key_password} validated={this.state.login_setup_new_key_password_error ? "error" : "default"} />
                         <FormHelper helperTextInvalid={this.state.login_setup_new_key_password_error} />
                     </FormGroup>
-                    <FormGroup label={_("Confirm new key password")} validated={this.state.login_setup_new_key_password2_error ? "error" : "default"}>
+                    <FormGroup label={_("Confirm new key password")}>
                         <TextInput id="login-setup-new-key-password2" onChange={(_event, value) => this.setState({ login_setup_new_key_password2: value })}
                                 type="password" value={this.state.login_setup_new_key_password2} validated={this.state.login_setup_new_key_password2_error ? "error" : "default"} />
 
