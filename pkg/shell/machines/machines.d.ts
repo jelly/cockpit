@@ -22,6 +22,8 @@ export interface Machine {
     visible?: boolean;
     problem: string | null;
     restarting?: boolean;
+    on_disk?: boolean;
+    host_key?: string | null;
 }
 
 interface MachinesEvents extends EventMap {
