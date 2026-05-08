@@ -97,7 +97,8 @@ const Shell = () => {
 
     useEffect(() => {
         return state.on("connect", () => {
-            connect_host(host_modal_state, state, state.current_machine);
+            if (state.current_machine)
+                connect_host(host_modal_state, state, state.current_machine);
         });
     }, [host_modal_state, state]);
 
