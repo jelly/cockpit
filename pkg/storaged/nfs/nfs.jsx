@@ -215,7 +215,7 @@ function checked(error_title, promise) {
 }
 
 function mount(entry) {
-    checked("Could not mount the filesystem",
+    checked(_("Could not mount the filesystem"),
             client.nfs.mount_entry(entry));
 }
 
