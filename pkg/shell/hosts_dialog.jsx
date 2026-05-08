@@ -1032,11 +1032,13 @@ class ChangeAuth extends React.Component {
                             <Radio isChecked={this.state.auth === "password"}
                                    onChange={() => this.setState({ auth: "password" })}
                                    id="auth-password"
+                                   name="auth-method"
                                    value="password"
                                    label={_("Password")} />
                             <Radio isChecked={this.state.auth === "key"}
                                    onChange={() => this.setState({ auth: "key" })}
                                    id="auth-key"
+                                   name="auth-method"
                                    value="key"
                                    label={_("SSH key")} />
                         </FormGroup>
