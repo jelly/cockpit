@@ -330,6 +330,7 @@ class AddMachine extends React.Component {
             return c;
 
         const colors = /rgb\((\d*), (\d*), (\d*)\)/.exec(c);
+        cockpit.assert(colors, "invalid color format");
         return "#" + toHex(colors[1]) + toHex(colors[2]) + toHex(colors[3]);
     }
 
