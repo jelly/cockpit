@@ -36,9 +36,13 @@ interface MachinesEvents extends EventMap {
 export interface Machines extends EventSource<MachinesEvents> {
     ready: boolean;
 
-    lookup: (conection_string: string) => Machine;
+    lookup: (connection_string: string) => Machine | null;
     list: Machine[];
-    change: (key: string, props: Partial<Machine>) => void;
+    addresses: string[];
+    change: (key: string, props: Partial<Machine>) => Promise<void>;
+    add: (connection_string: string, color?: string) => Promise<void>;
+    add_key: (host_key: string) => Promise<string>;
+    unused_color: () => string;
 }
 
 interface Loader {
