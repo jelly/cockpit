@@ -133,7 +133,8 @@ class TestServices(testlib.MachineCase):
     def wait_service_not_present(self, service: str):
         self.browser.wait_not_present(self.svc_sel(service))
 
-    def make_test_service(self, path: str = "/etc/systemd/system/"):
+    def make_test_service(self, user: bool = False):
+        path = "/etc/systemd/user" if user else "/etc/systemd/system"
         self.write_file(f"{path}/test.service",
                         """
 [Unit]
@@ -224,7 +225,7 @@ ExecStart=/usr/bin/true
 WantedBy=default.target
 """)
 
-        self.make_test_service(path)
+        self.make_test_service(user)
 
         url = "/system/services#/?owner=user" if user else "/system/services"
         self.login_and_go(url, user="admin")
@@ -390,7 +391,7 @@ ExecStart=/usr/bin/false
 [Install]
 WantedBy=default.target
 """)
-        self.make_test_service("/etc/systemd/system")
+        self.make_test_service()
         self.machine.execute("systemctl enable --now test-fail.service")
 
         def init_filter_state():
@@ -580,7 +581,7 @@ OnCalendar=*:1/2
 [Install]
 WantedBy=default.target
 """)
-        self.make_test_service(path)
+        self.make_test_service(user)
 
         # ensure we have one running timer; in user mode we do not have
         # a running logind session at this point yet, so enable instead
@@ -723,8 +724,7 @@ ExecStart=/bin/awk -f /tmp/mem-hog{params}.awk
 
         self.login_and_go(f'/system/services#/{"?owner=user" if user else ""}')
 
-        path = "/etc/systemd/user" if user else "/etc/systemd/system"
-        self.make_test_service(path)
+        self.make_test_service(user)
 
         # Targets tab
         self.pick_tab(2)
@@ -778,7 +778,7 @@ ExecStart=/bin/awk -f /tmp/mem-hog{params}.awk
                 return url + ("" if "#/" in url else "#/") + "?owner=user"
             return url
 
-        self.make_test_service("/etc/systemd/user" if user else "/etc/systemd/system")
+        self.make_test_service(user)
 
         self.login_and_go(append_user("/system/services"))
         self.wait_page_load()
@@ -1304,7 +1304,7 @@ Where=/fail
         b.wait_js_cond('window.location.hash == "#/"')
 
         # ensure that there is at least one running service
-        self.make_test_service("/etc/systemd/user")
+        self.make_test_service(user=True)
         self.run_systemctl("enable --now test.service", user=True)
         b.click("#user")
         self.wait_service_state("test.service", "active")
