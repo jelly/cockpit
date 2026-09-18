@@ -25,5 +25,5 @@ jobs:
 
       - name: Run cockpit-container-update
         run: |
-          make bots
+          ./test/common/make-bots
           COCKPIT_BOTS_REF=update-container-workflow bots/cockpit-container-update containers/ws/Containerfile
