@@ -871,8 +871,7 @@ class OsUpdates extends React.Component {
 
         superuser.addEventListener("changed", this.handleSuperUserChange);
 
-        // HACK: force usage of PackageKit backend
-        this.packageManager = await getPackageManager(true);
+        this.packageManager = await getPackageManager();
         this.backend = await this.packageManager.get_backend();
 
         // check if there is an upgrade in progress already; if so, switch to "applying" state right away
