@@ -172,7 +172,7 @@ type UseFileWithErrorOptions = {
     log_errors?: boolean;
 };
 
-export function useFileWithError(path: string, options: cockpit.JsonObject, hook_options: UseFileWithErrorOptions) {
+export function useFileWithError(path: string, options: cockpit.FileOpenOptions, hook_options: UseFileWithErrorOptions) {
     const [content_and_error, setContentAndError] = useState<[string | false | null, cockpit.BasicError | false | null]>([null, null]);
     const memo_options = useDeepEqualMemo(options);
     const memo_hook_options = useDeepEqualMemo(hook_options);
@@ -190,7 +190,7 @@ export function useFileWithError(path: string, options: cockpit.JsonObject, hook
     return content_and_error;
 }
 
-export function useFile(path: string, options: cockpit.JsonObject) {
+export function useFile(path: string, options: cockpit.FileOpenOptions) {
     const [content] = useFileWithError(path, options, { log_errors: true });
     return content;
 }
